@@ -1,8 +1,7 @@
-// Eat-Poop-Sleep tracker (GitHub Gists for cloud sync)
-// Updated: Cloud storage using GitHub Gists API
+// Eat-Poop-Sleep tracker (Firebase Firestore for cloud sync)
+// Updated: Cloud storage with real-time sync across devices
 const KEY = 'eps_events_v1';
-const GIST_FILENAME = 'eps-events.json';
-const GIST_CONFIG_KEY = 'github_gist_config';
+const EVENTS_COLLECTION = 'events';
 
 const elements = {
   btnSleep: document.getElementById('btn-sleep'),
@@ -20,310 +19,101 @@ const elements = {
   btnExportSummary: document.getElementById('btn-export-summary'),
   btnExportData: document.getElementById('btn-export-data'),
   btnImportData: document.getElementById('btn-import-data'),
-  btnSetupGitHub: document.getElementById('btn-setup-github'),
-  btnMigrateData: document.getElementById('btn-migrate-data'),
   btnClear: document.getElementById('btn-clear'),
 };
 
 let events = [];
 let sleeping = false;
-let githubReady = false;
-let syncInterval = null;
-let githubConfig = null;
+let firestoreReady = false;
+let unsubscribeFirestore = null;
 
-// Load GitHub config from localStorage or window
-function loadGitHubConfig(){
-  try{
-    const stored = localStorage.getItem(GIST_CONFIG_KEY);
-    if(stored){
-      return JSON.parse(stored);
-    }
-  } catch(e){}
-  
-  // Fallback to window config
-  if(typeof window.githubConfig !== 'undefined'){
-    return window.githubConfig;
-  }
-  
-  return null;
+// Check if Firebase is available
+function isFirebaseAvailable(){
+  return typeof window.db !== 'undefined' && typeof window.firestoreFunctions !== 'undefined';
 }
 
-// Save GitHub config
-function saveGitHubConfig(config){
-  localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
-  githubConfig = config;
-}
-
-// GitHub API helper
-async function githubAPI(endpoint, method = 'GET', body = null){
-  if(!githubConfig || !githubConfig.token){
-    throw new Error('GitHub token not configured');
-  }
-  
-  const url = `https://api.github.com${endpoint}`;
-  const options = {
-    method,
-    headers: {
-      'Authorization': `token ${githubConfig.token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json'
-    }
-  };
-  
-  if(body){
-    options.body = JSON.stringify(body);
-  }
-  
-  const response = await fetch(url, options);
-  
-  if(!response.ok){
-    let errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
-    try{
-      const error = await response.json();
-      errorMessage = error.message || errorMessage;
-      // Add more helpful error messages
-      if(response.status === 401){
-        errorMessage = 'Invalid GitHub token. Please check your token and try again.';
-      } else if(response.status === 403){
-        errorMessage = 'Token does not have permission. Make sure your token has "gist" scope.';
-      } else if(response.status === 404){
-        errorMessage = 'Gist not found. The Gist may have been deleted.';
-      }
-    } catch(e){
-      // Couldn't parse error response
-    }
-    throw new Error(errorMessage);
-  }
-  
-  return response.json();
-}
-
-// Create a new Gist
-async function createGist(){
-  const response = await githubAPI('/gists', 'POST', {
-    description: 'Eat-Poop-Sleep Tracker Events',
-    public: false,
-    files: {
-      [GIST_FILENAME]: {
-        content: JSON.stringify([], null, 2)
-      }
-    }
-  });
-  
-  return response.id;
-}
-
-// Get Gist content
-async function getGist(gistId){
-  const gist = await githubAPI(`/gists/${gistId}`);
-  const file = gist.files[GIST_FILENAME];
-  
-  if(!file){
-    throw new Error('Gist file not found');
-  }
-  
-  return JSON.parse(file.content);
-}
-
-// Update Gist content
-async function updateGist(gistId, eventsData){
-  const gist = await githubAPI(`/gists/${gistId}`);
-  
-  await githubAPI(`/gists/${gistId}`, 'PATCH', {
-    description: 'Eat-Poop-Sleep Tracker Events',
-    files: {
-      [GIST_FILENAME]: {
-        content: JSON.stringify(eventsData, null, 2)
-      }
-    }
-  });
-}
-
-// Migrate localStorage data to GitHub
-async function migrateLocalStorageToGitHub(){
-  if(!githubConfig || !githubConfig.token || !githubConfig.gistId){
-    alert('GitHub sync not configured. Please set it up first.');
+// Initialize Firebase connection
+async function initFirebase(){
+  if(!isFirebaseAvailable()){
+    console.warn('Firebase not available, falling back to localStorage');
+    events = loadFromLocalStorage();
+    sleeping = calcSleepingFromEvents();
+    render();
     return;
   }
   
-  const localData = loadFromLocalStorage();
-  if(localData.length === 0){
-    alert('No data found in local storage to migrate.');
-    return;
-  }
-  
-  const confirmMigrate = confirm(`Found ${localData.length} events in local storage.\n\nWould you like to upload them to GitHub?\n\nThis will merge with any existing data in your Gist.`);
-  if(!confirmMigrate) return;
-  
   try{
-    // Get existing Gist data
-    let existingEvents = [];
-    try{
-      existingEvents = await getGist(githubConfig.gistId);
-    } catch(e){
-      // Gist might be empty, that's okay
-    }
+    const { collection, getDocs, query, orderBy, onSnapshot } = window.firestoreFunctions;
     
-    // Merge data (localStorage + existing Gist)
-    const merged = [...existingEvents, ...localData];
-    merged.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    // Load initial data
+    const eventsRef = collection(window.db, EVENTS_COLLECTION);
+    const q = query(eventsRef, orderBy('ts', 'desc'));
+    const snapshot = await getDocs(q);
     
-    // Remove duplicates
-    const seen = new Set();
-    const uniqueEvents = merged.filter(ev => {
-      if(ev.id && seen.has(ev.id)) return false;
-      if(ev.id) seen.add(ev.id);
-      return true;
+    events = [];
+    snapshot.forEach((doc) => {
+      events.push({ id: doc.id, ...doc.data() });
     });
     
-    // Upload to GitHub
-    await updateGist(githubConfig.gistId, uniqueEvents);
-    events = uniqueEvents;
-    sleeping = calcSleepingFromEvents();
-    render();
-    
-    // Clear localStorage after successful migration
-    localStorage.removeItem(KEY);
-    
-    alert(`Successfully migrated ${localData.length} events to GitHub!`);
-  } catch(error){
-    alert('Migration failed: ' + error.message);
-    console.error('Migration error:', error);
-  }
-}
-
-// Setup GitHub token manually
-async function setupGitHubToken(){
-  const username = prompt('Enter your GitHub username:', githubConfig?.username || 'nokescohen');
-  if(!username){
-    alert('Username is required');
-    return;
-  }
-  
-  const token = prompt('Enter your GitHub Personal Access Token:\n\nGet one at: https://github.com/settings/tokens\n\n(Required scope: gist)');
-  if(!token){
-    alert('Token is required for GitHub sync');
-    return;
-  }
-  
-  githubConfig = {
-    username: username,
-    token: token,
-    gistId: githubConfig?.gistId || ''
-  };
-  
-  saveGitHubConfig(githubConfig);
-  
-  // Reinitialize
-  await initGitHub();
-  
-  // Check if there's localStorage data to migrate
-  const localData = loadFromLocalStorage();
-  if(localData.length > 0){
-    const migrate = confirm(`GitHub sync configured!\n\nFound ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub now?`);
-    if(migrate){
-      await migrateLocalStorageToGitHub();
+    // Check if there's localStorage data to migrate
+    const localData = loadFromLocalStorage();
+    if(localData.length > 0 && events.length === 0){
+      const migrate = confirm(`Found ${localData.length} events in local storage.\n\nWould you like to migrate them to Firebase?\n\nClick OK to migrate, Cancel to start fresh.`);
+      if(migrate){
+        // Migrate localStorage to Firebase
+        await migrateLocalStorageToFirebase(localData);
+        events = localData;
+        localStorage.removeItem(KEY); // Clear after migration
+      }
     }
-  } else {
-    alert('GitHub sync configured! Your data will now sync across devices.');
+    
+    sleeping = calcSleepingFromEvents();
+    render();
+    
+    // Set up real-time listener for sync across devices
+    unsubscribeFirestore = onSnapshot(q, (snapshot) => {
+      events = [];
+      snapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() });
+      });
+      sleeping = calcSleepingFromEvents();
+      render();
+    });
+    
+    firestoreReady = true;
+    console.log('Firebase connected, real-time sync enabled');
+  } catch(error){
+    console.error('Firebase initialization error:', error);
+    // Fallback to localStorage
+    events = loadFromLocalStorage();
+    sleeping = calcSleepingFromEvents();
+    render();
   }
 }
 
-// Initialize GitHub storage
-async function initGitHub(){
-  githubConfig = loadGitHubConfig();
-  
-  if(!githubConfig || !githubConfig.username){
-    console.warn('GitHub not configured, falling back to localStorage');
-    events = loadFromLocalStorage();
-    sleeping = calcSleepingFromEvents();
-    render();
-    return;
-  }
-  
-  // Check if token is set
-  if(!githubConfig.token){
-    console.warn('GitHub token not set, using localStorage only. Click "Setup GitHub Sync" to enable cloud sync.');
-    events = loadFromLocalStorage();
-    sleeping = calcSleepingFromEvents();
-    render();
-    return;
-  }
+// Migrate localStorage data to Firebase
+async function migrateLocalStorageToFirebase(localData){
+  if(!isFirebaseAvailable()) return;
   
   try{
-    // Get or create Gist
-    if(!githubConfig.gistId){
-      console.log('Creating new Gist...');
-      githubConfig.gistId = await createGist();
-      saveGitHubConfig(githubConfig);
-      
-      // Check if there's existing localStorage data to migrate
-      const localData = loadFromLocalStorage();
-      if(localData.length > 0){
-        const migrate = confirm(`Found ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub?\n\nClick OK to migrate, Cancel to start fresh.`);
-        if(migrate){
-          events = localData;
-          await updateGist(githubConfig.gistId, events);
-          // Clear localStorage after successful migration
-          localStorage.removeItem(KEY);
-        }
-      }
-    } else {
-      // Load existing data from Gist
-      events = await getGist(githubConfig.gistId);
-      events.sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Sort newest first
-      
-      // If Gist is empty but localStorage has data, offer to migrate
-      if(events.length === 0){
-        const localData = loadFromLocalStorage();
-        if(localData.length > 0){
-          const migrate = confirm(`Your GitHub Gist is empty, but you have ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub?\n\nClick OK to migrate, Cancel to keep them local.`);
-          if(migrate){
-            events = localData;
-            await updateGist(githubConfig.gistId, events);
-            // Clear localStorage after successful migration
-            localStorage.removeItem(KEY);
-          } else {
-            // Keep using localStorage
-            events = localData;
-          }
-        }
-      }
-    }
+    const { collection, doc, setDoc } = window.firestoreFunctions;
+    const eventsRef = collection(window.db, EVENTS_COLLECTION);
     
-    sleeping = calcSleepingFromEvents();
-    render();
+    // Upload all events to Firestore
+    const savePromises = localData.map(ev => {
+      const eventDoc = doc(eventsRef, ev.id);
+      return setDoc(eventDoc, {
+        type: ev.type,
+        ts: ev.ts,
+        data: ev.data || {}
+      });
+    });
     
-    // Set up polling for sync (every 5 seconds)
-    syncInterval = setInterval(async () => {
-      try{
-        const remoteEvents = await getGist(githubConfig.gistId);
-        remoteEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-        
-        // Check if remote has newer data
-        if(remoteEvents.length !== events.length || 
-           JSON.stringify(remoteEvents) !== JSON.stringify(events)){
-          events = remoteEvents;
-          sleeping = calcSleepingFromEvents();
-          render();
-        }
-      } catch(error){
-        console.error('Sync error:', error);
-      }
-    }, 5000);
-    
-    githubReady = true;
-    console.log('GitHub Gist connected, sync enabled');
+    await Promise.all(savePromises);
+    console.log(`Migrated ${localData.length} events to Firebase`);
   } catch(error){
-    console.error('GitHub initialization error:', error);
-    const errorMsg = error.message || 'Unknown error';
-    
-    // Show detailed error to help user fix it
-    alert(`GitHub sync failed: ${errorMsg}\n\nCommon issues:\n- Invalid or expired token\n- Token missing "gist" scope\n- Network connection issue\n\nFalling back to localStorage. Click "Setup GitHub Sync" to try again.`);
-    
-    events = loadFromLocalStorage();
-    sleeping = calcSleepingFromEvents();
-    render();
+    console.error('Migration error:', error);
+    throw error;
   }
 }
 
@@ -358,14 +148,27 @@ function calcSleepingFromEvents(){
 }
 
 async function save(){
-  if(githubReady && githubConfig && githubConfig.gistId){
+  if(firestoreReady && isFirebaseAvailable()){
     try{
-      await updateGist(githubConfig.gistId, events);
+      const { collection, doc, setDoc } = window.firestoreFunctions;
+      const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      
+      // Save all events to Firestore
+      const savePromises = events.map(ev => {
+        const eventDoc = doc(eventsRef, ev.id);
+        return setDoc(eventDoc, {
+          type: ev.type,
+          ts: ev.ts,
+          data: ev.data || {}
+        });
+      });
+      
+      await Promise.all(savePromises);
       // Also save to localStorage as backup
       saveToLocalStorage();
-      // Don't call render() - polling will update if needed
+      // Don't call render() - real-time listener will update UI
     } catch(error){
-      console.error('GitHub save error:', error);
+      console.error('Firestore save error:', error);
       // Fallback to localStorage
       saveToLocalStorage();
       render();
@@ -403,17 +206,51 @@ function addEvent(type, data = {}){
 
 async function undoLast(){
   if(events.length===0) return;
+  const eventToDelete = events[0];
   events.shift();
-  await save();
-  render();
+  
+  if(firestoreReady && isFirebaseAvailable()){
+    try{
+      const { collection, doc, deleteDoc } = window.firestoreFunctions;
+      const eventDoc = doc(collection(window.db, EVENTS_COLLECTION), eventToDelete.id);
+      await deleteDoc(eventDoc);
+      // Real-time listener will update UI
+    } catch(error){
+      console.error('Firestore delete error:', error);
+      save();
+    }
+  } else {
+    save();
+  }
 }
 
 async function clearAll(){
   if(!confirm('Clear all events?')) return;
-  events = [];
-  sleeping = false;
-  await save();
-  render();
+  
+  if(firestoreReady && isFirebaseAvailable()){
+    try{
+      const { collection, getDocs, doc, deleteDoc } = window.firestoreFunctions;
+      const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      const snapshot = await getDocs(eventsRef);
+      
+      const deletePromises = [];
+      snapshot.forEach((docSnap) => {
+        deletePromises.push(deleteDoc(doc(eventsRef, docSnap.id)));
+      });
+      
+      await Promise.all(deletePromises);
+      events = [];
+      sleeping = false;
+      // Real-time listener will update UI
+    } catch(error){
+      console.error('Firestore clear error:', error);
+      events = [];
+      save();
+    }
+  } else {
+    events = [];
+    save();
+  }
 }
 
 function exportCSV(){
@@ -482,7 +319,22 @@ function importData(){
         
         async function doImport(){
           if(action){
-            // Replace - just set new events (will overwrite on save)
+            // Replace - clear all first if using Firebase
+            if(firestoreReady && isFirebaseAvailable()){
+              try{
+                const { collection, getDocs, doc, deleteDoc } = window.firestoreFunctions;
+                const eventsRef = collection(window.db, EVENTS_COLLECTION);
+                const snapshot = await getDocs(eventsRef);
+                
+                const deletePromises = [];
+                snapshot.forEach((docSnap) => {
+                  deletePromises.push(deleteDoc(doc(eventsRef, docSnap.id)));
+                });
+                await Promise.all(deletePromises);
+              } catch(error){
+                console.error('Error clearing Firestore:', error);
+              }
+            }
             events = importedEvents;
           } else{
             // Merge - combine and sort by timestamp
@@ -914,9 +766,21 @@ function render(){
     del.title = 'Delete';
     del.onclick = async () => { 
       if(confirm('Delete this event?')){
-        events = events.filter(x=>x.id!==ev.id);
-        await save();
-        render();
+        if(firestoreReady && isFirebaseAvailable()){
+          try{
+            const { collection, doc, deleteDoc } = window.firestoreFunctions;
+            const eventDoc = doc(collection(window.db, EVENTS_COLLECTION), ev.id);
+            await deleteDoc(eventDoc);
+            // Real-time listener will update UI
+          } catch(error){
+            console.error('Firestore delete error:', error);
+            events = events.filter(x=>x.id!==ev.id);
+            save();
+          }
+        } else {
+          events = events.filter(x=>x.id!==ev.id);
+          save();
+        }
       }
     };
 
@@ -989,12 +853,10 @@ elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 elements.btnExportData.addEventListener('click', exportData);
 elements.btnImportData.addEventListener('click', importData);
-if(elements.btnSetupGitHub) elements.btnSetupGitHub.addEventListener('click', setupGitHubToken);
-if(elements.btnMigrateData) elements.btnMigrateData.addEventListener('click', migrateLocalStorageToGitHub);
 elements.btnClear.addEventListener('click', clearAll);
 
-// Initialize GitHub storage and start app
-initGitHub().then(() => {
+// Initialize Firebase and start app
+initFirebase().then(() => {
   // Set up daily email check
   setupDailyEmailCheck();
 }).catch(error => {

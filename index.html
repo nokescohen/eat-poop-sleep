@@ -43,8 +43,6 @@
       <button id="btn-export-summary">Export Daily Summary</button>
       <button id="btn-export-data">Export Data</button>
       <button id="btn-import-data">Import Data</button>
-      <button id="btn-setup-github">Setup GitHub Sync</button>
-      <button id="btn-migrate-data">Migrate to GitHub</button>
       <button id="btn-clear">Clear all</button>
     </section>
 
@@ -55,16 +53,27 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <!-- GitHub Storage Configuration -->
-  <script>
-    // GitHub configuration - REPLACE WITH YOUR VALUES
-    window.githubConfig = {
-      username: 'nokescohen', // Your GitHub username
-      token: '', // Leave empty - will prompt on first use
-      gistId: '' // Leave empty - will be created automatically
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    
+    // Firebase configuration - REPLACE WITH YOUR OWN CONFIG
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
     
-    // Load app.js
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    window.db = getFirestore(app);
+    window.firestoreFunctions = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+    
+    // Load app.js after Firebase is ready
     const script = document.createElement('script');
     script.src = 'app.js';
     document.body.appendChild(script);
