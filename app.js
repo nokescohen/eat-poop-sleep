@@ -77,8 +77,22 @@ async function githubAPI(endpoint, method = 'GET', body = null){
   const response = await fetch(url, options);
   
   if(!response.ok){
-    const error = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(error.message || `GitHub API error: ${response.status}`);
+    let errorMessage = `GitHub API error: ${response.status} ${response.statusText}`;
+    try{
+      const error = await response.json();
+      errorMessage = error.message || errorMessage;
+      // Add more helpful error messages
+      if(response.status === 401){
+        errorMessage = 'Invalid GitHub token. Please check your token and try again.';
+      } else if(response.status === 403){
+        errorMessage = 'Token does not have permission. Make sure your token has "gist" scope.';
+      } else if(response.status === 404){
+        errorMessage = 'Gist not found. The Gist may have been deleted.';
+      }
+    } catch(e){
+      // Couldn't parse error response
+    }
+    throw new Error(errorMessage);
   }
   
   return response.json();
@@ -302,7 +316,11 @@ async function initGitHub(){
     console.log('GitHub Gist connected, sync enabled');
   } catch(error){
     console.error('GitHub initialization error:', error);
-    alert('GitHub setup failed: ' + error.message + '\n\nFalling back to localStorage.');
+    const errorMsg = error.message || 'Unknown error';
+    
+    // Show detailed error to help user fix it
+    alert(`GitHub sync failed: ${errorMsg}\n\nCommon issues:\n- Invalid or expired token\n- Token missing "gist" scope\n- Network connection issue\n\nFalling back to localStorage. Click "Setup GitHub Sync" to try again.`);
+    
     events = loadFromLocalStorage();
     sleeping = calcSleepingFromEvents();
     render();
