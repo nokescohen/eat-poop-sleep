@@ -2,18 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+  <meta name="description" content="Track baby and mama stats - feeds, sleep, diapers, and more" />
+  <meta name="theme-color" content="#0b84ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="EPS Tracker" />
   <title>Eat • Poop • Sleep — Tracker</title>
   <link rel="stylesheet" href="app.css" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
 </head>
 <body>
   <main class="container">
     <h1>Eat • Poop • Sleep</h1>
 
+    <h2 class="section-title">Baby Stats</h2>
     <section class="buttons">
-      <button id="btn-pee" class="big pee">Pee</button>
+      <button id="btn-sleep" class="big sleep">Sleep</button>
       <button id="btn-feed" class="big feed">Feed +1 oz</button>
       <button id="btn-poop" class="big poop">Poop</button>
+      <button id="btn-pee" class="big pee">Pee</button>
+    </section>
+
+    <h2 class="section-title">Mama Stats</h2>
+    <section class="buttons">
+      <button id="btn-pump" class="big pump">Pump +1 oz</button>
+      <button id="btn-freeze" class="big freeze">Freeze +1 oz</button>
+      <button id="btn-h2o" class="big h2o">H2O +40 oz</button>
     </section>
 
     <section class="status-row">
@@ -24,6 +40,7 @@
     <section class="controls">
       <button id="btn-undo">Undo last</button>
       <button id="btn-export">Export CSV</button>
+      <button id="btn-export-summary">Export Daily Summary</button>
       <button id="btn-clear">Clear all</button>
     </section>
 
@@ -33,6 +50,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
