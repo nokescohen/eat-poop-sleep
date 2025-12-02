@@ -21,6 +21,7 @@ const elements = {
   btnExportData: document.getElementById('btn-export-data'),
   btnImportData: document.getElementById('btn-import-data'),
   btnSetupGitHub: document.getElementById('btn-setup-github'),
+  btnMigrateData: document.getElementById('btn-migrate-data'),
   btnClear: document.getElementById('btn-clear'),
 };
 
@@ -124,6 +125,59 @@ async function updateGist(gistId, eventsData){
   });
 }
 
+// Migrate localStorage data to GitHub
+async function migrateLocalStorageToGitHub(){
+  if(!githubConfig || !githubConfig.token || !githubConfig.gistId){
+    alert('GitHub sync not configured. Please set it up first.');
+    return;
+  }
+  
+  const localData = loadFromLocalStorage();
+  if(localData.length === 0){
+    alert('No data found in local storage to migrate.');
+    return;
+  }
+  
+  const confirmMigrate = confirm(`Found ${localData.length} events in local storage.\n\nWould you like to upload them to GitHub?\n\nThis will merge with any existing data in your Gist.`);
+  if(!confirmMigrate) return;
+  
+  try{
+    // Get existing Gist data
+    let existingEvents = [];
+    try{
+      existingEvents = await getGist(githubConfig.gistId);
+    } catch(e){
+      // Gist might be empty, that's okay
+    }
+    
+    // Merge data (localStorage + existing Gist)
+    const merged = [...existingEvents, ...localData];
+    merged.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+    
+    // Remove duplicates
+    const seen = new Set();
+    const uniqueEvents = merged.filter(ev => {
+      if(ev.id && seen.has(ev.id)) return false;
+      if(ev.id) seen.add(ev.id);
+      return true;
+    });
+    
+    // Upload to GitHub
+    await updateGist(githubConfig.gistId, uniqueEvents);
+    events = uniqueEvents;
+    sleeping = calcSleepingFromEvents();
+    render();
+    
+    // Clear localStorage after successful migration
+    localStorage.removeItem(KEY);
+    
+    alert(`Successfully migrated ${localData.length} events to GitHub!`);
+  } catch(error){
+    alert('Migration failed: ' + error.message);
+    console.error('Migration error:', error);
+  }
+}
+
 // Setup GitHub token manually
 async function setupGitHubToken(){
   const username = prompt('Enter your GitHub username:', githubConfig?.username || 'nokescohen');
@@ -148,7 +202,17 @@ async function setupGitHubToken(){
   
   // Reinitialize
   await initGitHub();
-  alert('GitHub sync configured! Your data will now sync across devices.');
+  
+  // Check if there's localStorage data to migrate
+  const localData = loadFromLocalStorage();
+  if(localData.length > 0){
+    const migrate = confirm(`GitHub sync configured!\n\nFound ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub now?`);
+    if(migrate){
+      await migrateLocalStorageToGitHub();
+    }
+  } else {
+    alert('GitHub sync configured! Your data will now sync across devices.');
+  }
 }
 
 // Initialize GitHub storage
@@ -178,11 +242,40 @@ async function initGitHub(){
       console.log('Creating new Gist...');
       githubConfig.gistId = await createGist();
       saveGitHubConfig(githubConfig);
+      
+      // Check if there's existing localStorage data to migrate
+      const localData = loadFromLocalStorage();
+      if(localData.length > 0){
+        const migrate = confirm(`Found ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub?\n\nClick OK to migrate, Cancel to start fresh.`);
+        if(migrate){
+          events = localData;
+          await updateGist(githubConfig.gistId, events);
+          // Clear localStorage after successful migration
+          localStorage.removeItem(KEY);
+        }
+      }
+    } else {
+      // Load existing data from Gist
+      events = await getGist(githubConfig.gistId);
+      events.sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Sort newest first
+      
+      // If Gist is empty but localStorage has data, offer to migrate
+      if(events.length === 0){
+        const localData = loadFromLocalStorage();
+        if(localData.length > 0){
+          const migrate = confirm(`Your GitHub Gist is empty, but you have ${localData.length} events in local storage.\n\nWould you like to migrate them to GitHub?\n\nClick OK to migrate, Cancel to keep them local.`);
+          if(migrate){
+            events = localData;
+            await updateGist(githubConfig.gistId, events);
+            // Clear localStorage after successful migration
+            localStorage.removeItem(KEY);
+          } else {
+            // Keep using localStorage
+            events = localData;
+          }
+        }
+      }
     }
-    
-    // Load initial data
-    events = await getGist(githubConfig.gistId);
-    events.sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Sort newest first
     
     sleeping = calcSleepingFromEvents();
     render();
@@ -879,6 +972,7 @@ elements.btnExportSummary.addEventListener('click', exportDailySummary);
 elements.btnExportData.addEventListener('click', exportData);
 elements.btnImportData.addEventListener('click', importData);
 if(elements.btnSetupGitHub) elements.btnSetupGitHub.addEventListener('click', setupGitHubToken);
+if(elements.btnMigrateData) elements.btnMigrateData.addEventListener('click', migrateLocalStorageToGitHub);
 elements.btnClear.addEventListener('click', clearAll);
 
 // Initialize GitHub storage and start app
