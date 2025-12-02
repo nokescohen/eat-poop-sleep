@@ -41,6 +41,9 @@
       <button id="btn-undo">Undo last</button>
       <button id="btn-export">Export CSV</button>
       <button id="btn-export-summary">Export Daily Summary</button>
+      <button id="btn-export-data">Export Data</button>
+      <button id="btn-import-data">Import Data</button>
+      <button id="btn-setup-github">Setup GitHub Sync</button>
       <button id="btn-clear">Clear all</button>
     </section>
 
@@ -51,6 +54,19 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <script src="app.js"></script>
+  <!-- GitHub Storage Configuration -->
+  <script>
+    // GitHub configuration - REPLACE WITH YOUR VALUES
+    window.githubConfig = {
+      username: 'nokescohen', // Your GitHub username
+      token: '', // Leave empty - will prompt on first use
+      gistId: '' // Leave empty - will be created automatically
+    };
+    
+    // Load app.js
+    const script = document.createElement('script');
+    script.src = 'app.js';
+    document.body.appendChild(script);
+  </script>
 </body>
 </html>

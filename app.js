@@ -1,6 +1,8 @@
-// Eat-Poop-Sleep tracker (vanilla JS, localStorage)
-// Updated: separate Pee & Poop buttons, Feed increments 1 oz per tap, Sleep start/stop toggle
+// Eat-Poop-Sleep tracker (GitHub Gists for cloud sync)
+// Updated: Cloud storage using GitHub Gists API
 const KEY = 'eps_events_v1';
+const GIST_FILENAME = 'eps-events.json';
+const GIST_CONFIG_KEY = 'github_gist_config';
 
 const elements = {
   btnSleep: document.getElementById('btn-sleep'),
@@ -16,11 +18,203 @@ const elements = {
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
+  btnExportData: document.getElementById('btn-export-data'),
+  btnImportData: document.getElementById('btn-import-data'),
+  btnSetupGitHub: document.getElementById('btn-setup-github'),
   btnClear: document.getElementById('btn-clear'),
 };
 
-let events = load();
-let sleeping = calcSleepingFromEvents();
+let events = [];
+let sleeping = false;
+let githubReady = false;
+let syncInterval = null;
+let githubConfig = null;
+
+// Load GitHub config from localStorage or window
+function loadGitHubConfig(){
+  try{
+    const stored = localStorage.getItem(GIST_CONFIG_KEY);
+    if(stored){
+      return JSON.parse(stored);
+    }
+  } catch(e){}
+  
+  // Fallback to window config
+  if(typeof window.githubConfig !== 'undefined'){
+    return window.githubConfig;
+  }
+  
+  return null;
+}
+
+// Save GitHub config
+function saveGitHubConfig(config){
+  localStorage.setItem(GIST_CONFIG_KEY, JSON.stringify(config));
+  githubConfig = config;
+}
+
+// GitHub API helper
+async function githubAPI(endpoint, method = 'GET', body = null){
+  if(!githubConfig || !githubConfig.token){
+    throw new Error('GitHub token not configured');
+  }
+  
+  const url = `https://api.github.com${endpoint}`;
+  const options = {
+    method,
+    headers: {
+      'Authorization': `token ${githubConfig.token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    }
+  };
+  
+  if(body){
+    options.body = JSON.stringify(body);
+  }
+  
+  const response = await fetch(url, options);
+  
+  if(!response.ok){
+    const error = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(error.message || `GitHub API error: ${response.status}`);
+  }
+  
+  return response.json();
+}
+
+// Create a new Gist
+async function createGist(){
+  const response = await githubAPI('/gists', 'POST', {
+    description: 'Eat-Poop-Sleep Tracker Events',
+    public: false,
+    files: {
+      [GIST_FILENAME]: {
+        content: JSON.stringify([], null, 2)
+      }
+    }
+  });
+  
+  return response.id;
+}
+
+// Get Gist content
+async function getGist(gistId){
+  const gist = await githubAPI(`/gists/${gistId}`);
+  const file = gist.files[GIST_FILENAME];
+  
+  if(!file){
+    throw new Error('Gist file not found');
+  }
+  
+  return JSON.parse(file.content);
+}
+
+// Update Gist content
+async function updateGist(gistId, eventsData){
+  const gist = await githubAPI(`/gists/${gistId}`);
+  
+  await githubAPI(`/gists/${gistId}`, 'PATCH', {
+    description: 'Eat-Poop-Sleep Tracker Events',
+    files: {
+      [GIST_FILENAME]: {
+        content: JSON.stringify(eventsData, null, 2)
+      }
+    }
+  });
+}
+
+// Setup GitHub token manually
+async function setupGitHubToken(){
+  const username = prompt('Enter your GitHub username:', githubConfig?.username || 'nokescohen');
+  if(!username){
+    alert('Username is required');
+    return;
+  }
+  
+  const token = prompt('Enter your GitHub Personal Access Token:\n\nGet one at: https://github.com/settings/tokens\n\n(Required scope: gist)');
+  if(!token){
+    alert('Token is required for GitHub sync');
+    return;
+  }
+  
+  githubConfig = {
+    username: username,
+    token: token,
+    gistId: githubConfig?.gistId || ''
+  };
+  
+  saveGitHubConfig(githubConfig);
+  
+  // Reinitialize
+  await initGitHub();
+  alert('GitHub sync configured! Your data will now sync across devices.');
+}
+
+// Initialize GitHub storage
+async function initGitHub(){
+  githubConfig = loadGitHubConfig();
+  
+  if(!githubConfig || !githubConfig.username){
+    console.warn('GitHub not configured, falling back to localStorage');
+    events = loadFromLocalStorage();
+    sleeping = calcSleepingFromEvents();
+    render();
+    return;
+  }
+  
+  // Check if token is set
+  if(!githubConfig.token){
+    console.warn('GitHub token not set, using localStorage only. Click "Setup GitHub Sync" to enable cloud sync.');
+    events = loadFromLocalStorage();
+    sleeping = calcSleepingFromEvents();
+    render();
+    return;
+  }
+  
+  try{
+    // Get or create Gist
+    if(!githubConfig.gistId){
+      console.log('Creating new Gist...');
+      githubConfig.gistId = await createGist();
+      saveGitHubConfig(githubConfig);
+    }
+    
+    // Load initial data
+    events = await getGist(githubConfig.gistId);
+    events.sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Sort newest first
+    
+    sleeping = calcSleepingFromEvents();
+    render();
+    
+    // Set up polling for sync (every 5 seconds)
+    syncInterval = setInterval(async () => {
+      try{
+        const remoteEvents = await getGist(githubConfig.gistId);
+        remoteEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        
+        // Check if remote has newer data
+        if(remoteEvents.length !== events.length || 
+           JSON.stringify(remoteEvents) !== JSON.stringify(events)){
+          events = remoteEvents;
+          sleeping = calcSleepingFromEvents();
+          render();
+        }
+      } catch(error){
+        console.error('Sync error:', error);
+      }
+    }, 5000);
+    
+    githubReady = true;
+    console.log('GitHub Gist connected, sync enabled');
+  } catch(error){
+    console.error('GitHub initialization error:', error);
+    alert('GitHub setup failed: ' + error.message + '\n\nFalling back to localStorage.');
+    events = loadFromLocalStorage();
+    sleeping = calcSleepingFromEvents();
+    render();
+  }
+}
 
 function nowISO(){ return new Date().toISOString(); }
 function fmtTime(iso){
@@ -28,11 +222,19 @@ function fmtTime(iso){
   return d.toLocaleString([], {hour:'2-digit', minute:'2-digit', month:'short', day:'numeric', hour12: false});
 }
 
-function load(){
+// Fallback to localStorage if Firebase not available
+function loadFromLocalStorage(){
   try{
     const raw = localStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : [];
   }catch(e){ return []; }
+}
+
+// Save to localStorage as backup
+function saveToLocalStorage(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify(events));
+  }catch(e){ console.error('LocalStorage save error:', e); }
 }
 
 // Determine sleeping state from most recent sleep event: if most recent sleep event is sleep_start -> sleeping = true
@@ -44,9 +246,24 @@ function calcSleepingFromEvents(){
   return false;
 }
 
-function save(){
-  localStorage.setItem(KEY, JSON.stringify(events));
-  render();
+async function save(){
+  if(githubReady && githubConfig && githubConfig.gistId){
+    try{
+      await updateGist(githubConfig.gistId, events);
+      // Also save to localStorage as backup
+      saveToLocalStorage();
+      // Don't call render() - polling will update if needed
+    } catch(error){
+      console.error('GitHub save error:', error);
+      // Fallback to localStorage
+      saveToLocalStorage();
+      render();
+    }
+  } else {
+    // Fallback to localStorage
+    saveToLocalStorage();
+    render();
+  }
 }
 
 function addEvent(type, data = {}){
@@ -73,16 +290,19 @@ function addEvent(type, data = {}){
   save();
 }
 
-function undoLast(){
+async function undoLast(){
   if(events.length===0) return;
   events.shift();
-  save();
+  await save();
+  render();
 }
 
-function clearAll(){
+async function clearAll(){
   if(!confirm('Clear all events?')) return;
   events = [];
-  save();
+  sleeping = false;
+  await save();
+  render();
 }
 
 function exportCSV(){
@@ -99,6 +319,90 @@ function exportCSV(){
   a.download = 'eps_events.csv';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportData(){
+  if(events.length===0){ alert('No data to export'); return; }
+  const data = {
+    version: '1.0',
+    exported: new Date().toISOString(),
+    events: events
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'eps_data_backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const data = JSON.parse(e.target.result);
+        let importedEvents = [];
+        
+        // Handle different export formats
+        if(data.events && Array.isArray(data.events)){
+          importedEvents = data.events;
+        } else if(Array.isArray(data)){
+          importedEvents = data;
+        } else{
+          throw new Error('Invalid file format');
+        }
+        
+        if(importedEvents.length === 0){
+          alert('No events found in file');
+          return;
+        }
+        
+        // Ask user if they want to merge or replace
+        const action = confirm(`Found ${importedEvents.length} events.\n\nClick OK to REPLACE all current data.\nClick Cancel to MERGE with existing data.`);
+        
+        async function doImport(){
+          if(action){
+            // Replace - just set new events (will overwrite on save)
+            events = importedEvents;
+          } else{
+            // Merge - combine and sort by timestamp
+            const merged = [...events, ...importedEvents];
+            merged.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+            // Remove duplicates based on ID if they exist
+            const seen = new Set();
+            events = merged.filter(ev => {
+              if(ev.id && seen.has(ev.id)) return false;
+              if(ev.id) seen.add(ev.id);
+              return true;
+            });
+          }
+          
+          // Recalculate sleep state
+          sleeping = calcSleepingFromEvents();
+          
+          // Save to Firestore or localStorage
+          await save();
+          alert(`Successfully imported ${importedEvents.length} events!`);
+        }
+        
+        doImport();
+      } catch(error){
+        alert('Error importing data: ' + error.message);
+        console.error('Import error:', error);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 function generateDailySummaryText(eventsToUse = events){
@@ -497,7 +801,13 @@ function render(){
     const del = document.createElement('button');
     del.textContent = '⋯';
     del.title = 'Delete';
-    del.onclick = () => { if(confirm('Delete this event?')){ events = events.filter(x=>x.id!==ev.id); save(); } };
+    del.onclick = async () => { 
+      if(confirm('Delete this event?')){
+        events = events.filter(x=>x.id!==ev.id);
+        await save();
+        render();
+      }
+    };
 
     li.appendChild(left);
     li.appendChild(del);
@@ -566,13 +876,20 @@ elements.btnUndo.addEventListener('click', () => {
 
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
+elements.btnExportData.addEventListener('click', exportData);
+elements.btnImportData.addEventListener('click', importData);
+if(elements.btnSetupGitHub) elements.btnSetupGitHub.addEventListener('click', setupGitHubToken);
 elements.btnClear.addEventListener('click', clearAll);
 
-// initial render (ensure sleeping reflects events)
-render();
-
-// Set up daily email check
-setupDailyEmailCheck();
+// Initialize GitHub storage and start app
+initGitHub().then(() => {
+  // Set up daily email check
+  setupDailyEmailCheck();
+}).catch(error => {
+  console.error('Failed to initialize:', error);
+  // Fallback: render with localStorage data
+  render();
+});
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
