@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Eat • Poop • Sleep — Tracker</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Eat • Poop • Sleep</h1>
+
+    <section class="buttons">
+      <button id="btn-pee" class="big pee">Pee</button>
+      <button id="btn-feed" class="big feed">Feed +1 oz</button>
+      <button id="btn-poop" class="big poop">Poop</button>
+    </section>
+
+    <section class="status-row">
+      <div id="sleep-status" class="status">Awake</div>
+      <div id="stats" class="status">—</div>
+    </section>
+
+    <section class="controls">
+      <button id="btn-undo">Undo last</button>
+      <button id="btn-export">Export CSV</button>
+      <button id="btn-clear">Clear all</button>
+    </section>
+
+    <section>
+      <h2>History</h2>
+      <ul id="history" class="history"></ul>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
