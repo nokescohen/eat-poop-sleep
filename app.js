@@ -1216,7 +1216,7 @@ function updateChartBaby() {
             // Format based on stat type
             if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
               return value.toFixed(1);
-            } else if (stat === 'sleep') {
+            } else if (stat === 'sleep' || stat === 'avg_wake_window') {
               return value.toFixed(1) + 'h';
             } else {
               return Math.round(value);
