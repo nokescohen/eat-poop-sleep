@@ -14,15 +14,12 @@ const elements = {
   btnFreeze: document.getElementById('btn-freeze'),
   btnH2O: document.getElementById('btn-h2o'),
   history: document.getElementById('history'),
-  stats: document.getElementById('stats'),
+  statsBaby: document.getElementById('stats-baby'),
+  statsMama: document.getElementById('stats-mama'),
   sleepStatus: document.getElementById('sleep-status'),
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
-  btnExportData: document.getElementById('btn-export-data'),
-  btnImportData: document.getElementById('btn-import-data'),
-  btnTestEmail: document.getElementById('btn-test-email'),
-  btnClear: document.getElementById('btn-clear'),
 };
 
 let events = [];
@@ -707,8 +704,10 @@ function render(){
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
-  const statText = `24h — Baby: Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean} | Mama: Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
-  elements.stats.textContent = statText;
+  const babyStatText = `24h — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}`;
+  const mamaStatText = `24h — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
+  elements.statsBaby.textContent = babyStatText;
+  elements.statsMama.textContent = mamaStatText;
 
   // history
   elements.history.innerHTML = '';
@@ -853,10 +852,6 @@ elements.btnUndo.addEventListener('click', () => {
 
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
-elements.btnExportData.addEventListener('click', exportData);
-elements.btnImportData.addEventListener('click', importData);
-elements.btnTestEmail.addEventListener('click', sendTestEmail);
-elements.btnClear.addEventListener('click', clearAll);
 
 // Initialize Firebase and start app
 initFirebase().then(() => {

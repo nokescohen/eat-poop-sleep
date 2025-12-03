@@ -63,8 +63,16 @@ h1{margin:0 0 12px;font-size:20px}
   text-align:center;
   line-height:1.4;
 }
-#stats{
+.stats-boxes{display:flex;gap:10px;margin-bottom:12px}
+.stats-box{
+  flex:1;
+  padding:10px;
+  border-radius:8px;
+  background:#f8fafc;
+  color:var(--muted);
   font-size:12px;
+  text-align:center;
+  line-height:1.4;
   word-break:break-word;
 }
 
