@@ -899,6 +899,14 @@ elements.btnUndo.addEventListener('click', () => {
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+function formatDateLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Chart functions
 function aggregateDataForChart(stat, interval, timeframeDays) {
   const now = new Date();
@@ -942,7 +950,7 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         date.setHours(0, 0, 0, 0);
-        const key = date.toISOString().split('T')[0];
+        const key = formatDateLocal(date);
         periods.push({ key, date, value: 0 });
         dataMap.set(key, 0);
       }
@@ -955,7 +963,7 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
         // Get start of week (Sunday)
         const dayOfWeek = date.getDay();
         date.setDate(date.getDate() - dayOfWeek);
-        const key = date.toISOString().split('T')[0];
+        const key = formatDateLocal(date);
         periods.push({ key, date, value: 0 });
         dataMap.set(key, 0);
       }
@@ -966,7 +974,7 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         date.setHours(0, 0, 0, 0);
-        const key = date.toISOString().split('T')[0];
+        const key = formatDateLocal(date);
         periods.push({ key, date, value: 0 });
         dataMap.set(key, 0);
       }
@@ -979,7 +987,7 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
         // Get start of week (Sunday)
         const dayOfWeek = date.getDay();
         date.setDate(date.getDate() - dayOfWeek);
-        const key = date.toISOString().split('T')[0];
+        const key = formatDateLocal(date);
         periods.push({ key, date, value: 0 });
         dataMap.set(key, 0);
       }
@@ -994,13 +1002,13 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
     if (interval === 'daily') {
       const dayStart = new Date(evDate);
       dayStart.setHours(0, 0, 0, 0);
-      periodKey = dayStart.toISOString().split('T')[0];
+      periodKey = formatDateLocal(dayStart);
     } else if (interval === 'weekly') {
       const weekStart = new Date(evDate);
       weekStart.setHours(0, 0, 0, 0);
       const dayOfWeek = weekStart.getDay();
       weekStart.setDate(weekStart.getDate() - dayOfWeek);
-      periodKey = weekStart.toISOString().split('T')[0];
+      periodKey = formatDateLocal(weekStart);
     }
     
     if (!periodKey || !dataMap.has(periodKey)) continue;
