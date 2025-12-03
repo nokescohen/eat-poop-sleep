@@ -10,6 +10,7 @@ const elements = {
   btnPee: document.getElementById('btn-pee'),
   btnAntibiotic: document.getElementById('btn-antibiotic'),
   btnWoundClean: document.getElementById('btn-wound-clean'),
+  btnVitD: document.getElementById('btn-vit-d'),
   btnPump: document.getElementById('btn-pump'),
   btnFreeze: document.getElementById('btn-freeze'),
   btnH2O: document.getElementById('btn-h2o'),
@@ -17,6 +18,7 @@ const elements = {
   statsBaby: document.getElementById('stats-baby'),
   statsMama: document.getElementById('stats-mama'),
   sleepStatus: document.getElementById('sleep-status'),
+  datePicker: document.getElementById('date-picker'),
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
@@ -26,6 +28,7 @@ let events = [];
 let sleeping = false;
 let firestoreReady = false;
 let unsubscribeFirestore = null;
+let selectedDate = new Date(); // Default to today
 
 // Check if Firebase is available
 function isFirebaseAvailable(){
@@ -394,6 +397,7 @@ function generateDailySummaryText(eventsToUse = events){
     let peeCount = 0;
     let antibioticCount = 0;
     let woundCleanCount = 0;
+    let vitDCount = 0;
     const wakeWindows = [];
     
     // Mama stats
@@ -458,6 +462,7 @@ function generateDailySummaryText(eventsToUse = events){
       if(ev.type === 'pee') peeCount++;
       if(ev.type === 'antibiotic') antibioticCount++;
       if(ev.type === 'wound_clean') woundCleanCount++;
+      if(ev.type === 'vit_d') vitDCount++;
       if(ev.type === 'pump') pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
       if(ev.type === 'freeze') freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
       if(ev.type === 'h2o') h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
@@ -481,7 +486,7 @@ function generateDailySummaryText(eventsToUse = events){
     const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${avgWakeWindow.toFixed(1)} hours` : '';
     
     // Build summary line
-    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Fed ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
+    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Fed ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
     summaries.push(summary);
   }
   
@@ -645,16 +650,15 @@ function render(){
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
 
-  // stats: counts for today (current day from 00:00:00 to 23:59:59.999)
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0 };
+  // stats: counts for selected date (from 00:00:00 to 23:59:59.999)
+  const dateStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
+  const dateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
+  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0, vitD:0 };
   
-  // Get all events from today, sorted chronologically
+  // Get all events from selected date, sorted chronologically
   const recentEvents = events.filter(ev => {
     const evDate = new Date(ev.ts);
-    return evDate >= todayStart && evDate <= todayEnd;
+    return evDate >= dateStart && evDate <= dateEnd;
   }).sort((a, b) => new Date(a.ts) - new Date(b.ts));
   
   // Calculate sleep hours and wake windows
@@ -687,14 +691,19 @@ function render(){
     if(ev.type === 'feed') counts.feedOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
     if(ev.type === 'antibiotic') counts.antibiotic++;
     if(ev.type === 'wound_clean') counts.woundClean++;
+    if(ev.type === 'vit_d') counts.vitD++;
     if(ev.type === 'pump') counts.pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
     if(ev.type === 'freeze') counts.freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
     if(ev.type === 'h2o') counts.h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
   }
   
   // Handle ongoing sleep session (sleep_start without matching sleep_end)
-  if(currentSleepStart){
-    const now = new Date();
+  // Only count if the selected date is today
+  const now = new Date();
+  const isToday = selectedDate.getFullYear() === now.getFullYear() && 
+                  selectedDate.getMonth() === now.getMonth() && 
+                  selectedDate.getDate() === now.getDate();
+  if(currentSleepStart && isToday){
     const sleepDuration = now - currentSleepStart;
     const sleepHours = sleepDuration / (1000 * 60 * 60);
     counts.sleepHours += sleepHours;
@@ -709,15 +718,19 @@ function render(){
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
-  const todayStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const babyStatText = `${todayStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}`;
-  const mamaStatText = `${todayStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
+  const dateStr = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
+  const mamaStatText = `${dateStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
 
-  // history
+  // Daily Log - show only events from selected date
   elements.history.innerHTML = '';
-  for(const ev of events){
+  const logEvents = events.filter(ev => {
+    const evDate = new Date(ev.ts);
+    return evDate >= dateStart && evDate <= dateEnd;
+  }).sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Most recent first
+  for(const ev of logEvents){
     const li = document.createElement('li');
     const left = document.createElement('div');
     const right = document.createElement('div');
@@ -792,6 +805,7 @@ function prettyLabel(ev){
   if(ev.type === 'poop') return 'Baby - Poop';
   if(ev.type === 'antibiotic') return 'Baby - Antibiotic';
   if(ev.type === 'wound_clean') return 'Baby - Wound Clean';
+  if(ev.type === 'vit_d') return 'Baby - Vit D Drop';
   if(ev.type === 'feed'){
     const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
     return `Baby - Feed${amt}`;
@@ -830,6 +844,10 @@ elements.btnWoundClean.addEventListener('click', () => {
   addEvent('wound_clean', {});
 });
 
+elements.btnVitD.addEventListener('click', () => {
+  addEvent('vit_d', {});
+});
+
 elements.btnFeed.addEventListener('click', () => {
   // Each press = 1 ounce
   addEvent('feed', { amount: 1 });
@@ -859,13 +877,26 @@ elements.btnUndo.addEventListener('click', () => {
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
+// Initialize date picker to today
+elements.datePicker.valueAsDate = new Date();
+elements.datePicker.addEventListener('change', (e) => {
+  selectedDate = new Date(e.target.value);
+  render();
+});
+
 // Initialize Firebase and start app
 initFirebase().then(() => {
   // Set up daily email check
   setupDailyEmailCheck();
+  // Initialize date picker after Firebase loads
+  elements.datePicker.valueAsDate = new Date();
+  selectedDate = new Date();
+  render();
 }).catch(error => {
   console.error('Failed to initialize:', error);
   // Fallback: render with localStorage data
+  elements.datePicker.valueAsDate = new Date();
+  selectedDate = new Date();
   render();
 });
 

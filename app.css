@@ -48,6 +48,7 @@ h1{margin:0 0 12px;font-size:20px}
 .pee{background:linear-gradient(180deg,#eab308,#ca8a04)}
 .antibiotic{background:linear-gradient(180deg,#ec4899,#db2777)}
 .wound-clean{background:linear-gradient(180deg,#10b981,#059669)}
+.vit-d{background:linear-gradient(180deg,#f97316,#ea580c)}
 .pump{background:linear-gradient(180deg,#ec4899,#db2777)}
 .freeze{background:linear-gradient(180deg,#14b8a6,#0d9488)}
 .h2o{background:linear-gradient(180deg,#3b82f6,#2563eb)}
@@ -85,6 +86,16 @@ h1{margin:0 0 12px;font-size:20px}
 .controls{display:flex;gap:8px;margin-bottom:12px}
 .controls button{
   flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef;background:white;
+}
+.date-picker{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #e6e9ef;
+  background:white;
+  font-size:14px;
+  margin-bottom:12px;
+  font-family:inherit;
 }
 
 .history{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
