@@ -107,6 +107,39 @@ h1{margin:0 0 12px;font-size:20px}
 .event-meta{color:var(--muted);font-size:12px}
 .event-meta:hover{color:var(--accent);opacity:0.8}
 
+.chart-section{margin-top:24px}
+.chart-controls{
+  display:flex;
+  gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.chart-control-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.chart-control-group label{
+  font-size:14px;
+  color:#374151;
+  font-weight:500;
+}
+.chart-select{
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid #e6e9ef;
+  background:white;
+  font-size:14px;
+  font-family:inherit;
+}
+#trend-chart{
+  max-height:300px;
+  width:100%;
+}
+
 @media (max-width:420px){
   .big{padding:14px;font-size:16px}
+  .chart-controls{flex-direction:column;gap:8px}
+  .chart-control-group{width:100%}
+  .chart-select{flex:1}
 }

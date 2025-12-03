@@ -22,6 +22,10 @@ const elements = {
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
+  chartStat: document.getElementById('chart-stat'),
+  chartInterval: document.getElementById('chart-interval'),
+  chartTimeframe: document.getElementById('chart-timeframe'),
+  trendChart: document.getElementById('trend-chart'),
 };
 
 let events = [];
@@ -29,6 +33,7 @@ let sleeping = false;
 let firestoreReady = false;
 let unsubscribeFirestore = null;
 let selectedDate = new Date(); // Default to today
+let trendChartInstance = null; // Chart.js instance
 
 // Check if Firebase is available
 function isFirebaseAvailable(){
@@ -179,7 +184,7 @@ async function save(){
   } else {
     // Fallback to localStorage
     saveToLocalStorage();
-    render();
+  render();
   }
 }
 
@@ -223,7 +228,7 @@ async function undoLast(){
       save();
     }
   } else {
-    save();
+  save();
   }
 }
 
@@ -251,8 +256,8 @@ async function clearAll(){
       save();
     }
   } else {
-    events = [];
-    save();
+  events = [];
+  save();
   }
 }
 
@@ -762,7 +767,7 @@ function render(){
       label.appendChild(labelText);
       label.appendChild(amountSpan);
     } else {
-      label.textContent = prettyLabel(ev);
+    label.textContent = prettyLabel(ev);
     }
     
     const meta = document.createElement('div');
@@ -881,6 +886,234 @@ elements.btnUndo.addEventListener('click', () => {
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
+// Chart functions
+function aggregateDataForChart(stat, interval, timeframeDays) {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - timeframeDays);
+  startDate.setHours(0, 0, 0, 0);
+  
+  // Filter events within timeframe
+  const relevantEvents = events.filter(ev => {
+    const evDate = new Date(ev.ts);
+    return evDate >= startDate;
+  });
+  
+  const dataMap = new Map();
+  
+  // Initialize all periods in the timeframe
+  const periods = [];
+  if (interval === 'daily') {
+    for (let i = timeframeDays - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const key = date.toISOString().split('T')[0];
+      periods.push({ key, date, value: 0 });
+      dataMap.set(key, 0);
+    }
+  } else if (interval === 'weekly') {
+    const weeks = Math.ceil(timeframeDays / 7);
+    for (let i = weeks - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (i * 7));
+      date.setHours(0, 0, 0, 0);
+      // Get start of week (Sunday)
+      const dayOfWeek = date.getDay();
+      date.setDate(date.getDate() - dayOfWeek);
+      const key = date.toISOString().split('T')[0];
+      periods.push({ key, date, value: 0 });
+      dataMap.set(key, 0);
+    }
+  }
+  
+  // Aggregate events by period
+  for (const ev of relevantEvents) {
+    const evDate = new Date(ev.ts);
+    let periodKey;
+    
+    if (interval === 'daily') {
+      const dayStart = new Date(evDate);
+      dayStart.setHours(0, 0, 0, 0);
+      periodKey = dayStart.toISOString().split('T')[0];
+    } else if (interval === 'weekly') {
+      const weekStart = new Date(evDate);
+      weekStart.setHours(0, 0, 0, 0);
+      const dayOfWeek = weekStart.getDay();
+      weekStart.setDate(weekStart.getDate() - dayOfWeek);
+      periodKey = weekStart.toISOString().split('T')[0];
+    }
+    
+    if (!periodKey || !dataMap.has(periodKey)) continue;
+    
+    let value = 0;
+    
+    if (stat === 'feed' && ev.type === 'feed') {
+      value = (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    } else if (stat === 'sleep' && (ev.type === 'sleep_start' || ev.type === 'sleep_end')) {
+      // Sleep requires special handling - we'll calculate hours between sleep_start and sleep_end
+      // For now, we'll track this separately
+      continue; // Skip for now, will handle below
+    } else if (stat === 'poop' && ev.type === 'poop') {
+      value = 1;
+    } else if (stat === 'pee' && ev.type === 'pee') {
+      value = 1;
+    } else if (stat === 'pump' && ev.type === 'pump') {
+      value = (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    } else if (stat === 'freeze' && ev.type === 'freeze') {
+      value = (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    } else if (stat === 'h2o' && ev.type === 'h2o') {
+      value = (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    } else if (stat === 'antibiotic' && ev.type === 'antibiotic') {
+      value = 1;
+    } else if (stat === 'wound_clean' && ev.type === 'wound_clean') {
+      value = 1;
+    } else if (stat === 'vit_d' && ev.type === 'vit_d') {
+      value = 1;
+    } else {
+      continue;
+    }
+    
+    dataMap.set(periodKey, dataMap.get(periodKey) + value);
+  }
+  
+  // Handle sleep hours calculation
+  if (stat === 'sleep') {
+    const sleepSessions = [];
+    let currentSleepStart = null;
+    
+    for (const ev of relevantEvents.sort((a, b) => new Date(a.ts) - new Date(b.ts))) {
+      if (ev.type === 'sleep_start') {
+        currentSleepStart = new Date(ev.ts);
+      } else if (ev.type === 'sleep_end' && currentSleepStart) {
+        const sleepEnd = new Date(ev.ts);
+        const sleepHours = (sleepEnd - currentSleepStart) / (1000 * 60 * 60);
+        
+        // Determine which period this sleep session belongs to
+        let periodKey;
+        if (interval === 'daily') {
+          const dayStart = new Date(currentSleepStart);
+          dayStart.setHours(0, 0, 0, 0);
+          periodKey = dayStart.toISOString().split('T')[0];
+        } else {
+          const weekStart = new Date(currentSleepStart);
+          weekStart.setHours(0, 0, 0, 0);
+          const dayOfWeek = weekStart.getDay();
+          weekStart.setDate(weekStart.getDate() - dayOfWeek);
+          periodKey = weekStart.toISOString().split('T')[0];
+        }
+        
+        if (periodKey && dataMap.has(periodKey)) {
+          dataMap.set(periodKey, dataMap.get(periodKey) + sleepHours);
+        }
+        
+        currentSleepStart = null;
+      }
+    }
+    
+    // Handle ongoing sleep (if today)
+    if (currentSleepStart && currentSleepStart >= startDate) {
+      const now = new Date();
+      const sleepHours = (now - currentSleepStart) / (1000 * 60 * 60);
+      let periodKey;
+      if (interval === 'daily') {
+        const dayStart = new Date(currentSleepStart);
+        dayStart.setHours(0, 0, 0, 0);
+        periodKey = dayStart.toISOString().split('T')[0];
+      } else {
+        const weekStart = new Date(currentSleepStart);
+        weekStart.setHours(0, 0, 0, 0);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek);
+        periodKey = weekStart.toISOString().split('T')[0];
+      }
+      if (periodKey && dataMap.has(periodKey)) {
+        dataMap.set(periodKey, dataMap.get(periodKey) + sleepHours);
+      }
+    }
+  }
+  
+  // Update periods with actual values
+  for (const period of periods) {
+    period.value = dataMap.get(period.key) || 0;
+  }
+  
+  return periods;
+}
+
+function updateChart() {
+  if (!elements.trendChart || typeof Chart === 'undefined') return;
+  
+  const stat = elements.chartStat.value;
+  const interval = elements.chartInterval.value;
+  const timeframe = parseInt(elements.chartTimeframe.value);
+  
+  const data = aggregateDataForChart(stat, interval, timeframe);
+  
+  const labels = data.map(d => {
+    const date = new Date(d.key);
+    if (interval === 'daily') {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+  });
+  
+  const values = data.map(d => d.value);
+  
+  const statLabels = {
+    feed: 'Feed (oz)',
+    sleep: 'Sleep (hours)',
+    poop: 'Poop',
+    pee: 'Pee',
+    pump: 'Pump (oz)',
+    freeze: 'Freeze (oz)',
+    h2o: 'H2O (oz)',
+    antibiotic: 'Antibiotic',
+    wound_clean: 'Wound Clean',
+    vit_d: 'Vit D Drop'
+  };
+  
+  if (trendChartInstance) {
+    trendChartInstance.destroy();
+  }
+  
+  trendChartInstance = new Chart(elements.trendChart, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: statLabels[stat] || stat,
+        data: values,
+        borderColor: '#0b84ff',
+        backgroundColor: 'rgba(11, 132, 255, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+// Chart control event listeners
+elements.chartStat.addEventListener('change', updateChart);
+elements.chartInterval.addEventListener('change', updateChart);
+elements.chartTimeframe.addEventListener('change', updateChart);
+
 // Initialize date picker to today
 const today = new Date();
 const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
@@ -910,7 +1143,7 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
-  render();
+render();
 });
 
 // Register service worker for PWA functionality
