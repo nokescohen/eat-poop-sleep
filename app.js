@@ -544,7 +544,7 @@ function generateDailySummaryText(eventsToUse = events){
     const breastHoursStr = breastHours > 0 ? `${breastHours.toFixed(1)} hours` : '0 hours';
     
     // Build summary line
-    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Breastfed ${breastHoursStr}, Bottle: ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
+    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Breastfed ${breastHoursStr}, Bottle Feed: ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
     summaries.push(summary);
   }
   
@@ -818,9 +818,10 @@ function render(){
   }
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
+  const breastHoursStr = counts.breastHours > 0 ? `${counts.breastHours.toFixed(1)}h` : '0h';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
   const dateStr = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
+  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Bottle Feed: ${counts.feedOunces}oz, Breastfeed: ${breastHoursStr}, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
   const mamaStatText = `${dateStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
@@ -1069,10 +1070,10 @@ function prettyLabel(ev){
   if(ev.type === 'vit_d') return 'Baby - Vit D Drop';
   if(ev.type === 'feed'){
     const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
-    return `Baby - Bottle${amt}`;
+    return `Baby - Bottle Feed${amt}`;
   }
-  if(ev.type === 'breast_start') return 'Baby - Breast — start';
-  if(ev.type === 'breast_end') return 'Baby - Breast — end';
+  if(ev.type === 'breast_start') return 'Baby - Breastfeed — start';
+  if(ev.type === 'breast_end') return 'Baby - Breastfeed — end';
   if(ev.type === 'pump'){
     const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
     return `Mama - Pump${amt}`;
