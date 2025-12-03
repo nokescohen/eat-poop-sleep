@@ -783,28 +783,28 @@ function render(){
 }
 
 function prettyLabel(ev){
-  if(ev.type === 'pee') return 'Pee';
-  if(ev.type === 'poop') return 'Poop';
-  if(ev.type === 'antibiotic') return 'Antibiotic';
-  if(ev.type === 'wound_clean') return 'Wound Clean';
+  if(ev.type === 'pee') return 'Baby - Pee';
+  if(ev.type === 'poop') return 'Baby - Poop';
+  if(ev.type === 'antibiotic') return 'Baby - Antibiotic';
+  if(ev.type === 'wound_clean') return 'Baby - Wound Clean';
   if(ev.type === 'feed'){
-    const amt = ev.data && ev.data.amount ? ` • ${ev.data.amount} oz` : '';
-    return `Feed${amt}`;
+    const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
+    return `Baby - Feed${amt}`;
   }
   if(ev.type === 'pump'){
-    const amt = ev.data && ev.data.amount ? ` • ${ev.data.amount} oz` : '';
-    return `Pump${amt}`;
+    const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
+    return `Mama - Pump${amt}`;
   }
   if(ev.type === 'freeze'){
-    const amt = ev.data && ev.data.amount ? ` • ${ev.data.amount} oz` : '';
-    return `Freeze${amt}`;
+    const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
+    return `Mama - Freeze${amt}`;
   }
   if(ev.type === 'h2o'){
-    const amt = ev.data && ev.data.amount ? ` • ${ev.data.amount} oz` : '';
-    return `H2O${amt}`;
+    const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
+    return `Mama - H2O${amt}`;
   }
-  if(ev.type==='sleep_start') return 'Sleep — start';
-  if(ev.type==='sleep_end') return 'Sleep — end';
+  if(ev.type==='sleep_start') return 'Baby - Sleep — start';
+  if(ev.type==='sleep_end') return 'Baby - Sleep — end';
   return ev.type;
 }
 
