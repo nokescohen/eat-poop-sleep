@@ -719,7 +719,7 @@ function render(){
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
   // update breast button text
-  elements.btnBreast.textContent = breastfeeding ? 'Stop Breast' : 'Breast';
+  elements.btnBreast.textContent = breastfeeding ? 'Stop Breastfeed' : 'Breastfeed';
 
   // stats: counts for selected date (from 00:00:00 to 23:59:59.999 in local timezone)
   // Use local timezone to avoid timezone conversion issues
@@ -779,16 +779,18 @@ function render(){
       currentBreastStart = null;
     }
     
-    // Count other events
+    // Count other events - only count events that occur on the selected date
+    if(t >= dateStart && t <= dateEnd){
     if(ev.type === 'pee') counts.pee++;
     if(ev.type === 'poop') counts.poop++;
     if(ev.type === 'feed') counts.feedOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
-    if(ev.type === 'antibiotic') counts.antibiotic++;
-    if(ev.type === 'wound_clean') counts.woundClean++;
-    if(ev.type === 'vit_d') counts.vitD++;
-    if(ev.type === 'pump') counts.pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
-    if(ev.type === 'freeze') counts.freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
-    if(ev.type === 'h2o') counts.h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+      if(ev.type === 'antibiotic') counts.antibiotic++;
+      if(ev.type === 'wound_clean') counts.woundClean++;
+      if(ev.type === 'vit_d') counts.vitD++;
+      if(ev.type === 'pump') counts.pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+      if(ev.type === 'freeze') counts.freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+      if(ev.type === 'h2o') counts.h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    }
   }
   
   // Handle ongoing sleep session (sleep_start without matching sleep_end)
