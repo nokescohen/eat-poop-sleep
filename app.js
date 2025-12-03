@@ -704,8 +704,9 @@ function render(){
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
-  const babyStatText = `24h — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}`;
-  const mamaStatText = `24h — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
+  const todayStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const babyStatText = `${todayStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}`;
+  const mamaStatText = `${todayStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
 
