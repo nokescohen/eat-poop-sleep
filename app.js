@@ -885,7 +885,15 @@ function render(){
       // If no end event found, fall through to add the start event as-is
     }
     
-    // For unpaired start events or other events, add them as-is
+    // Skip sleep_end and breast_end that are already paired (in usedEventIds)
+    if(ev.type === 'sleep_end' || ev.type === 'breast_end'){
+      if(usedEventIds.has(ev.id)){
+        continue; // Already paired, skip it
+      }
+      // If not paired, it's an orphaned end event - show it as-is
+    }
+    
+    // For unpaired start events, orphaned end events, or other events, add them as-is
     if(!usedEventIds.has(ev.id)){
       processedEvents.push(ev);
     }
