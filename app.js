@@ -199,7 +199,7 @@ async function save(){
       console.error('Firestore save error:', error);
       // Fallback to localStorage
       saveToLocalStorage();
-      render();
+  render();
     }
   } else {
     // Fallback to localStorage
@@ -245,7 +245,7 @@ async function undoLast(){
       // Real-time listener will update UI
     } catch(error){
       console.error('Firestore delete error:', error);
-      save();
+  save();
     }
   } else {
   save();
@@ -272,8 +272,8 @@ async function clearAll(){
       // Real-time listener will update UI
     } catch(error){
       console.error('Firestore clear error:', error);
-      events = [];
-      save();
+  events = [];
+  save();
     }
   } else {
   events = [];
@@ -816,11 +816,83 @@ function render(){
 
   // Daily Log - show only events from selected date
   elements.history.innerHTML = '';
-  const logEvents = events.filter(ev => {
+  const allLogEvents = events.filter(ev => {
     const evDate = new Date(ev.ts);
     return evDate >= dateStart && evDate <= dateEnd;
-  }).sort((a, b) => new Date(b.ts) - new Date(a.ts)); // Most recent first
-  for(const ev of logEvents){
+  }).sort((a, b) => new Date(a.ts) - new Date(b.ts)); // Sort chronologically for pairing
+  
+  // Pair up sleep and breast sessions
+  const processedEvents = [];
+  const usedEventIds = new Set();
+  
+  // First, pair up completed sessions
+  for(let i = 0; i < allLogEvents.length; i++){
+    if(usedEventIds.has(allLogEvents[i].id)) continue;
+    
+    const ev = allLogEvents[i];
+    
+    // Check for sleep sessions
+    if(ev.type === 'sleep_start'){
+      // Look for matching sleep_end
+      let endEvent = null;
+      for(let j = i + 1; j < allLogEvents.length; j++){
+        if(allLogEvents[j].type === 'sleep_end' && !usedEventIds.has(allLogEvents[j].id)){
+          endEvent = allLogEvents[j];
+          usedEventIds.add(endEvent.id);
+          break;
+        }
+      }
+      
+      if(endEvent){
+        // Create a combined session event
+        processedEvents.push({
+          type: 'sleep_session',
+          startEvent: ev,
+          endEvent: endEvent,
+          ts: ev.ts, // Use start time for sorting
+          id: ev.id + '_session' // Unique ID for the session
+        });
+        usedEventIds.add(ev.id);
+        continue;
+      }
+    }
+    
+    // Check for breast sessions
+    if(ev.type === 'breast_start'){
+      // Look for matching breast_end
+      let endEvent = null;
+      for(let j = i + 1; j < allLogEvents.length; j++){
+        if(allLogEvents[j].type === 'breast_end' && !usedEventIds.has(allLogEvents[j].id)){
+          endEvent = allLogEvents[j];
+          usedEventIds.add(endEvent.id);
+          break;
+        }
+      }
+      
+      if(endEvent){
+        // Create a combined session event
+        processedEvents.push({
+          type: 'breast_session',
+          startEvent: ev,
+          endEvent: endEvent,
+          ts: ev.ts, // Use start time for sorting
+          id: ev.id + '_session' // Unique ID for the session
+        });
+        usedEventIds.add(ev.id);
+        continue;
+      }
+    }
+    
+    // For unpaired start events or other events, add them as-is
+    if(!usedEventIds.has(ev.id)){
+      processedEvents.push(ev);
+    }
+  }
+  
+  // Sort by timestamp, most recent first
+  processedEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  
+  for(const ev of processedEvents){
     const li = document.createElement('li');
     const left = document.createElement('div');
     const right = document.createElement('div');
@@ -829,6 +901,74 @@ function render(){
     const label = document.createElement('div');
     label.className = 'event-label';
     
+    // Handle session events (paired start/end)
+    if(ev.type === 'sleep_session' || ev.type === 'breast_session'){
+      const startTime = fmtTime(ev.startEvent.ts);
+      const endTime = fmtTime(ev.endEvent.ts);
+      const sessionType = ev.type === 'sleep_session' ? 'Sleep Session' : 'Breast Session';
+      label.textContent = `Baby - ${sessionType}`;
+      
+      const meta = document.createElement('div');
+      meta.className = 'event-meta';
+      meta.textContent = `${startTime} - ${endTime}`;
+      meta.style.cursor = 'pointer';
+      meta.style.textDecoration = 'underline';
+      meta.title = 'Click to edit times';
+      meta.onclick = () => {
+        // When editing a session, allow editing both start and end times
+        const startTimeStr = prompt('Edit start time (format: YYYY-MM-DDTHH:mm):', new Date(ev.startEvent.ts).toISOString().slice(0, 16));
+        if(startTimeStr){
+          const newStartDate = new Date(startTimeStr);
+          if(!isNaN(newStartDate.getTime())){
+            ev.startEvent.ts = newStartDate.toISOString();
+            save();
+          }
+        }
+        const endTimeStr = prompt('Edit end time (format: YYYY-MM-DDTHH:mm):', new Date(ev.endEvent.ts).toISOString().slice(0, 16));
+        if(endTimeStr){
+          const newEndDate = new Date(endTimeStr);
+          if(!isNaN(newEndDate.getTime())){
+            ev.endEvent.ts = newEndDate.toISOString();
+            save();
+          }
+        }
+      };
+      
+      left.appendChild(label);
+      left.appendChild(meta);
+      
+      const del = document.createElement('button');
+      del.textContent = '×';
+      del.className = 'delete-btn';
+      del.onclick = async () => {
+        if(confirm('Delete this session?')){
+          // Delete both start and end events
+          if(firestoreReady && isFirebaseAvailable()){
+            try{
+              const { collection, doc, deleteDoc } = window.firestoreFunctions;
+              await deleteDoc(doc(collection(window.db, EVENTS_COLLECTION), ev.startEvent.id));
+              await deleteDoc(doc(collection(window.db, EVENTS_COLLECTION), ev.endEvent.id));
+              // Real-time listener will update UI
+            } catch(error){
+              console.error('Firestore delete error:', error);
+              events = events.filter(x => x.id !== ev.startEvent.id && x.id !== ev.endEvent.id);
+              save();
+            }
+          } else {
+            events = events.filter(x => x.id !== ev.startEvent.id && x.id !== ev.endEvent.id);
+            save();
+          }
+        }
+      };
+      
+      right.appendChild(del);
+      li.appendChild(left);
+      li.appendChild(right);
+      elements.history.appendChild(li);
+      continue;
+    }
+    
+    // Handle regular events (non-session)
     // Check if this event type has an amount
     const hasAmount = (ev.type === 'feed' || ev.type === 'pump' || ev.type === 'freeze' || ev.type === 'h2o') && ev.data && ev.data.amount;
     
@@ -1436,7 +1576,7 @@ elements.datePicker.addEventListener('change', (e) => {
   const dateStr = e.target.value; // Format: YYYY-MM-DD
   const [year, month, day] = dateStr.split('-').map(Number);
   selectedDate = new Date(year, month - 1, day); // month is 0-indexed
-  render();
+render();
 });
 
 // Initialize Firebase and start app
