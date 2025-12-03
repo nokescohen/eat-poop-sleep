@@ -903,14 +903,15 @@ function render(){
     
     // Handle session events (paired start/end)
     if(ev.type === 'sleep_session' || ev.type === 'breast_session'){
-      const startTime = fmtTime(ev.startEvent.ts);
-      const endTime = fmtTime(ev.endEvent.ts);
       const sessionType = ev.type === 'sleep_session' ? 'Sleep Session' : 'Breast Session';
       label.textContent = `Baby - ${sessionType}`;
       
       const meta = document.createElement('div');
       meta.className = 'event-meta';
-      meta.textContent = `${startTime} - ${endTime}`;
+      // Format time range: extract just the time part (HH:mm format)
+      const startTimeOnly = new Date(ev.startEvent.ts).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12: false});
+      const endTimeOnly = new Date(ev.endEvent.ts).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12: false});
+      meta.textContent = `${startTimeOnly} - ${endTimeOnly}`;
       meta.style.cursor = 'pointer';
       meta.style.textDecoration = 'underline';
       meta.title = 'Click to edit times';
