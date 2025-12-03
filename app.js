@@ -1143,6 +1143,23 @@ elements.btnUndo.addEventListener('click', () => {
   if(confirm('Undo last event?')) undoLast();
 });
 
+elements.btnClearCache.addEventListener('click', async () => {
+  if(confirm('This will clear the cache and reload the page. Continue?')){
+    // Clear all caches
+    if('caches' in window){
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+    // Unregister service worker
+    if('serviceWorker' in navigator){
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => reg.unregister()));
+    }
+    // Reload the page
+    window.location.reload(true);
+  }
+});
+
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
