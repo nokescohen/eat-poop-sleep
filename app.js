@@ -8,6 +8,8 @@ const elements = {
   btnFeed: document.getElementById('btn-feed'),
   btnPoop: document.getElementById('btn-poop'),
   btnPee: document.getElementById('btn-pee'),
+  btnAntibiotic: document.getElementById('btn-antibiotic'),
+  btnWoundClean: document.getElementById('btn-wound-clean'),
   btnPump: document.getElementById('btn-pump'),
   btnFreeze: document.getElementById('btn-freeze'),
   btnH2O: document.getElementById('btn-h2o'),
@@ -393,6 +395,8 @@ function generateDailySummaryText(eventsToUse = events){
     let feedOunces = 0;
     let poopCount = 0;
     let peeCount = 0;
+    let antibioticCount = 0;
+    let woundCleanCount = 0;
     const wakeWindows = [];
     
     // Mama stats
@@ -455,6 +459,8 @@ function generateDailySummaryText(eventsToUse = events){
       if(ev.type === 'feed') feedOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
       if(ev.type === 'poop') poopCount++;
       if(ev.type === 'pee') peeCount++;
+      if(ev.type === 'antibiotic') antibioticCount++;
+      if(ev.type === 'wound_clean') woundCleanCount++;
       if(ev.type === 'pump') pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
       if(ev.type === 'freeze') freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
       if(ev.type === 'h2o') h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
@@ -478,7 +484,7 @@ function generateDailySummaryText(eventsToUse = events){
     const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${avgWakeWindow.toFixed(1)} hours` : '';
     
     // Build summary line
-    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Fed ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
+    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Fed ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
     summaries.push(summary);
   }
   
@@ -644,7 +650,7 @@ function render(){
 
   // stats: counts in last 24h
   const since = new Date(Date.now() - 24*60*60*1000);
-  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0 };
+  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0 };
   
   // Get all events in last 24h, sorted chronologically
   const recentEvents = events.filter(ev => new Date(ev.ts) >= since).sort((a, b) => new Date(a.ts) - new Date(b.ts));
@@ -677,6 +683,8 @@ function render(){
     if(ev.type === 'pee') counts.pee++;
     if(ev.type === 'poop') counts.poop++;
     if(ev.type === 'feed') counts.feedOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
+    if(ev.type === 'antibiotic') counts.antibiotic++;
+    if(ev.type === 'wound_clean') counts.woundClean++;
     if(ev.type === 'pump') counts.pumpOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
     if(ev.type === 'freeze') counts.freezeOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
     if(ev.type === 'h2o') counts.h2oOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
@@ -699,7 +707,7 @@ function render(){
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
-  const statText = `24h — Baby: Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr} | Mama: Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
+  const statText = `24h — Baby: Pee: ${counts.pee}, Poop: ${counts.poop}, Feeds: ${counts.feedOunces}oz, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean} | Mama: Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.stats.textContent = statText;
 
   // history
@@ -777,6 +785,8 @@ function render(){
 function prettyLabel(ev){
   if(ev.type === 'pee') return 'Pee';
   if(ev.type === 'poop') return 'Poop';
+  if(ev.type === 'antibiotic') return 'Antibiotic';
+  if(ev.type === 'wound_clean') return 'Wound Clean';
   if(ev.type === 'feed'){
     const amt = ev.data && ev.data.amount ? ` • ${ev.data.amount} oz` : '';
     return `Feed${amt}`;
@@ -805,6 +815,14 @@ elements.btnPee.addEventListener('click', () => {
 
 elements.btnPoop.addEventListener('click', () => {
   addEvent('poop', {});
+});
+
+elements.btnAntibiotic.addEventListener('click', () => {
+  addEvent('antibiotic', {});
+});
+
+elements.btnWoundClean.addEventListener('click', () => {
+  addEvent('wound_clean', {});
 });
 
 elements.btnFeed.addEventListener('click', () => {
