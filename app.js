@@ -23,6 +23,7 @@ const elements = {
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
+  btnClearCache: document.getElementById('btn-clear-cache'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
