@@ -645,12 +645,17 @@ function render(){
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
 
-  // stats: counts in last 24h
-  const since = new Date(Date.now() - 24*60*60*1000);
+  // stats: counts for today (current day from 00:00:00 to 23:59:59.999)
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0 };
   
-  // Get all events in last 24h, sorted chronologically
-  const recentEvents = events.filter(ev => new Date(ev.ts) >= since).sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  // Get all events from today, sorted chronologically
+  const recentEvents = events.filter(ev => {
+    const evDate = new Date(ev.ts);
+    return evDate >= todayStart && evDate <= todayEnd;
+  }).sort((a, b) => new Date(a.ts) - new Date(b.ts));
   
   // Calculate sleep hours and wake windows
   let currentSleepStart = null;
