@@ -1161,13 +1161,13 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
       if (interval === 'daily') {
         const dayStart = new Date(currentSleepStart);
         dayStart.setHours(0, 0, 0, 0);
-        periodKey = dayStart.toISOString().split('T')[0];
+        periodKey = formatDateLocal(dayStart);
       } else {
         const weekStart = new Date(currentSleepStart);
         weekStart.setHours(0, 0, 0, 0);
         const dayOfWeek = weekStart.getDay();
         weekStart.setDate(weekStart.getDate() - dayOfWeek);
-        periodKey = weekStart.toISOString().split('T')[0];
+        periodKey = formatDateLocal(weekStart);
       }
       if (periodKey && dataMap.has(periodKey)) {
         dataMap.set(periodKey, dataMap.get(periodKey) + sleepHours);
@@ -1201,13 +1201,13 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
           if (interval === 'daily') {
             const dayStart = new Date(evDate);
             dayStart.setHours(0, 0, 0, 0);
-            periodKey = dayStart.toISOString().split('T')[0];
+            periodKey = formatDateLocal(dayStart);
           } else {
             const weekStart = new Date(evDate);
             weekStart.setHours(0, 0, 0, 0);
             const dayOfWeek = weekStart.getDay();
             weekStart.setDate(weekStart.getDate() - dayOfWeek);
-            periodKey = weekStart.toISOString().split('T')[0];
+            periodKey = formatDateLocal(weekStart);
           }
           
           if (periodKey && wakeWindowsByPeriod.has(periodKey)) {
