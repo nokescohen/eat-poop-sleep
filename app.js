@@ -481,6 +481,35 @@ function generateDailySummaryText(eventsToUse = events){
       }
     }
     
+    // Calculate breast hours by pairing breast_start and breast_end
+    const breastSessions = [];
+    let currentBreastStart = null;
+    
+    for(const ev of dayEvents){
+      if(ev.type === 'breast_start'){
+        currentBreastStart = new Date(ev.ts);
+      } else if(ev.type === 'breast_end' && currentBreastStart){
+        const breastEnd = new Date(ev.ts);
+        breastSessions.push({ start: currentBreastStart, end: breastEnd });
+        currentBreastStart = null;
+      }
+    }
+    
+    // Calculate total breast hours for completed sessions on this day
+    for(const session of breastSessions){
+      const dayStart = new Date(dateKey + 'T00:00:00');
+      const dayEnd = new Date(dateKey + 'T23:59:59.999');
+      
+      // Calculate the portion of breast session that occurred on this day
+      const sessionStart = session.start < dayStart ? dayStart : session.start;
+      const sessionEnd = session.end > dayEnd ? dayEnd : session.end;
+      
+      if(sessionEnd > sessionStart){
+        const durationMs = sessionEnd - sessionStart;
+        breastHours += durationMs / (1000 * 60 * 60);
+      }
+    }
+    
     // Count other events
     for(const ev of dayEvents){
       if(ev.type === 'feed') feedOunces += (ev.data && ev.data.amount) ? Number(ev.data.amount) : 0;
