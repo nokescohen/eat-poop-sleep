@@ -855,6 +855,7 @@ function render(){
         usedEventIds.add(ev.id);
         continue;
       }
+      // If no end event found, fall through to add the start event as-is
     }
     
     // Check for breast sessions
@@ -881,6 +882,7 @@ function render(){
         usedEventIds.add(ev.id);
         continue;
       }
+      // If no end event found, fall through to add the start event as-is
     }
     
     // For unpaired start events or other events, add them as-is
