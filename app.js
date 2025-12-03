@@ -1249,10 +1249,11 @@ initFirebase().then(() => {
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
   render();
-  // Initialize chart after render
+  // Initialize charts after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {
-      updateChart();
+      updateChartBaby();
+      updateChartMama();
     }
   }, 100);
 }).catch(error => {
@@ -1262,11 +1263,12 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
-render();
-  // Initialize chart after render
+  render();
+  // Initialize charts after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {
-      updateChart();
+      updateChartBaby();
+      updateChartMama();
     }
   }, 100);
 });
