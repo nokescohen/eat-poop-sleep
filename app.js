@@ -22,10 +22,14 @@ const elements = {
   btnUndo: document.getElementById('btn-undo'),
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
-  chartStat: document.getElementById('chart-stat'),
-  chartInterval: document.getElementById('chart-interval'),
-  chartTimeframe: document.getElementById('chart-timeframe'),
-  trendChart: document.getElementById('trend-chart'),
+  chartStatBaby: document.getElementById('chart-stat-baby'),
+  chartIntervalBaby: document.getElementById('chart-interval-baby'),
+  chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
+  trendChartBaby: document.getElementById('trend-chart-baby'),
+  chartStatMama: document.getElementById('chart-stat-mama'),
+  chartIntervalMama: document.getElementById('chart-interval-mama'),
+  chartTimeframeMama: document.getElementById('chart-timeframe-mama'),
+  trendChartMama: document.getElementById('trend-chart-mama'),
 };
 
 let events = [];
@@ -33,7 +37,8 @@ let sleeping = false;
 let firestoreReady = false;
 let unsubscribeFirestore = null;
 let selectedDate = new Date(); // Default to today
-let trendChartInstance = null; // Chart.js instance
+let trendChartInstanceBaby = null; // Chart.js instance for Baby
+let trendChartInstanceMama = null; // Chart.js instance for Mama
 
 // Check if Firebase is available
 function isFirebaseAvailable(){
@@ -889,41 +894,87 @@ elements.btnExportSummary.addEventListener('click', exportDailySummary);
 // Chart functions
 function aggregateDataForChart(stat, interval, timeframeDays) {
   const now = new Date();
-  const startDate = new Date(now);
-  startDate.setDate(startDate.getDate() - timeframeDays);
-  startDate.setHours(0, 0, 0, 0);
+  let startDate = null;
+  let relevantEvents = events;
   
-  // Filter events within timeframe
-  const relevantEvents = events.filter(ev => {
-    const evDate = new Date(ev.ts);
-    return evDate >= startDate;
-  });
+  if (timeframeDays !== null) {
+    startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - timeframeDays);
+    startDate.setHours(0, 0, 0, 0);
+    
+    // Filter events within timeframe
+    relevantEvents = events.filter(ev => {
+      const evDate = new Date(ev.ts);
+      return evDate >= startDate;
+    });
+  } else {
+    // All time - use earliest event date
+    if (events.length > 0) {
+      const earliestEvent = events.reduce((earliest, ev) => {
+        const evDate = new Date(ev.ts);
+        return evDate < earliest ? evDate : earliest;
+      }, new Date(events[0].ts));
+      startDate = new Date(earliestEvent);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 14); // Default to 2 weeks if no events
+    }
+  }
   
   const dataMap = new Map();
   
   // Initialize all periods in the timeframe
   const periods = [];
-  if (interval === 'daily') {
-    for (let i = timeframeDays - 1; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
-      const key = date.toISOString().split('T')[0];
-      periods.push({ key, date, value: 0 });
-      dataMap.set(key, 0);
+  if (timeframeDays === null) {
+    // All time - create periods from earliest event to now
+    const daysDiff = Math.ceil((now - startDate) / (1000 * 60 * 60 * 24));
+    if (interval === 'daily') {
+      for (let i = daysDiff - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const key = date.toISOString().split('T')[0];
+        periods.push({ key, date, value: 0 });
+        dataMap.set(key, 0);
+      }
+    } else if (interval === 'weekly') {
+      const weeks = Math.ceil(daysDiff / 7);
+      for (let i = weeks - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (i * 7));
+        date.setHours(0, 0, 0, 0);
+        // Get start of week (Sunday)
+        const dayOfWeek = date.getDay();
+        date.setDate(date.getDate() - dayOfWeek);
+        const key = date.toISOString().split('T')[0];
+        periods.push({ key, date, value: 0 });
+        dataMap.set(key, 0);
+      }
     }
-  } else if (interval === 'weekly') {
-    const weeks = Math.ceil(timeframeDays / 7);
-    for (let i = weeks - 1; i >= 0; i--) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - (i * 7));
-      date.setHours(0, 0, 0, 0);
-      // Get start of week (Sunday)
-      const dayOfWeek = date.getDay();
-      date.setDate(date.getDate() - dayOfWeek);
-      const key = date.toISOString().split('T')[0];
-      periods.push({ key, date, value: 0 });
-      dataMap.set(key, 0);
+  } else {
+    if (interval === 'daily') {
+      for (let i = timeframeDays - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const key = date.toISOString().split('T')[0];
+        periods.push({ key, date, value: 0 });
+        dataMap.set(key, 0);
+      }
+    } else if (interval === 'weekly') {
+      const weeks = Math.ceil(timeframeDays / 7);
+      for (let i = weeks - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (i * 7));
+        date.setHours(0, 0, 0, 0);
+        // Get start of week (Sunday)
+        const dayOfWeek = date.getDay();
+        date.setDate(date.getDate() - dayOfWeek);
+        const key = date.toISOString().split('T')[0];
+        periods.push({ key, date, value: 0 });
+        dataMap.set(key, 0);
+      }
     }
   }
   
@@ -1011,8 +1062,8 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
       }
     }
     
-    // Handle ongoing sleep (if today)
-    if (currentSleepStart && currentSleepStart >= startDate) {
+    // Handle ongoing sleep (if today or within timeframe)
+    if (currentSleepStart && (startDate === null || currentSleepStart >= startDate)) {
       const now = new Date();
       const sleepHours = (now - currentSleepStart) / (1000 * 60 * 60);
       let periodKey;
@@ -1041,12 +1092,12 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
   return periods;
 }
 
-function updateChart() {
-  if (!elements.trendChart || typeof Chart === 'undefined') return;
+function updateChartBaby() {
+  if (!elements.trendChartBaby || typeof Chart === 'undefined') return;
   
-  const stat = elements.chartStat.value;
-  const interval = elements.chartInterval.value;
-  const timeframe = parseInt(elements.chartTimeframe.value);
+  const stat = elements.chartStatBaby.value;
+  const interval = elements.chartIntervalBaby.value;
+  const timeframe = elements.chartTimeframeBaby.value === 'all' ? null : parseInt(elements.chartTimeframeBaby.value);
   
   const data = aggregateDataForChart(stat, interval, timeframe);
   
@@ -1066,19 +1117,16 @@ function updateChart() {
     sleep: 'Sleep (hours)',
     poop: 'Poop',
     pee: 'Pee',
-    pump: 'Pump (oz)',
-    freeze: 'Freeze (oz)',
-    h2o: 'H2O (oz)',
     antibiotic: 'Antibiotic',
     wound_clean: 'Wound Clean',
     vit_d: 'Vit D Drop'
   };
   
-  if (trendChartInstance) {
-    trendChartInstance.destroy();
+  if (trendChartInstanceBaby) {
+    trendChartInstanceBaby.destroy();
   }
   
-  trendChartInstance = new Chart(elements.trendChart, {
+  trendChartInstanceBaby = new Chart(elements.trendChartBaby, {
     type: 'line',
     data: {
       labels: labels,
@@ -1109,10 +1157,75 @@ function updateChart() {
   });
 }
 
+function updateChartMama() {
+  if (!elements.trendChartMama || typeof Chart === 'undefined') return;
+  
+  const stat = elements.chartStatMama.value;
+  const interval = elements.chartIntervalMama.value;
+  const timeframe = elements.chartTimeframeMama.value === 'all' ? null : parseInt(elements.chartTimeframeMama.value);
+  
+  const data = aggregateDataForChart(stat, interval, timeframe);
+  
+  const labels = data.map(d => {
+    const date = new Date(d.key);
+    if (interval === 'daily') {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+  });
+  
+  const values = data.map(d => d.value);
+  
+  const statLabels = {
+    pump: 'Pump (oz)',
+    freeze: 'Freeze (oz)',
+    h2o: 'H2O (oz)'
+  };
+  
+  if (trendChartInstanceMama) {
+    trendChartInstanceMama.destroy();
+  }
+  
+  trendChartInstanceMama = new Chart(elements.trendChartMama, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: statLabels[stat] || stat,
+        data: values,
+        borderColor: '#ec4899',
+        backgroundColor: 'rgba(236, 72, 153, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
 // Chart control event listeners
-elements.chartStat.addEventListener('change', updateChart);
-elements.chartInterval.addEventListener('change', updateChart);
-elements.chartTimeframe.addEventListener('change', updateChart);
+elements.chartStatBaby.addEventListener('change', updateChartBaby);
+elements.chartIntervalBaby.addEventListener('change', updateChartBaby);
+elements.chartTimeframeBaby.addEventListener('change', updateChartBaby);
+
+elements.chartStatMama.addEventListener('change', updateChartMama);
+elements.chartIntervalMama.addEventListener('change', updateChartMama);
+elements.chartTimeframeMama.addEventListener('change', updateChartMama);
 
 // Initialize date picker to today
 const today = new Date();
@@ -1149,7 +1262,7 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
-  render();
+render();
   // Initialize chart after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {

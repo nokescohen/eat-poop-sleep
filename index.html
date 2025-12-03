@@ -64,41 +64,76 @@
 
     <section class="chart-section">
       <h2>Trends</h2>
-      <div class="chart-controls">
-        <div class="chart-control-group">
-          <label for="chart-stat">Stat:</label>
-          <select id="chart-stat" class="chart-select">
-            <option value="feed">Feed (oz)</option>
-            <option value="sleep">Sleep (hours)</option>
-            <option value="poop">Poop</option>
-            <option value="pee">Pee</option>
-            <option value="pump">Pump (oz)</option>
-            <option value="freeze">Freeze (oz)</option>
-            <option value="h2o">H2O (oz)</option>
-            <option value="antibiotic">Antibiotic</option>
-            <option value="wound_clean">Wound Clean</option>
-            <option value="vit_d">Vit D Drop</option>
-          </select>
+      
+      <div class="chart-container">
+        <h3 class="chart-title">Baby Stats</h3>
+        <div class="chart-controls">
+          <div class="chart-control-group">
+            <label for="chart-stat-baby">Stat:</label>
+            <select id="chart-stat-baby" class="chart-select">
+              <option value="feed">Feed (oz)</option>
+              <option value="sleep">Sleep (hours)</option>
+              <option value="poop">Poop</option>
+              <option value="pee">Pee</option>
+              <option value="antibiotic">Antibiotic</option>
+              <option value="wound_clean">Wound Clean</option>
+              <option value="vit_d">Vit D Drop</option>
+            </select>
+          </div>
+          <div class="chart-control-group">
+            <label for="chart-interval-baby">Interval:</label>
+            <select id="chart-interval-baby" class="chart-select">
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+          <div class="chart-control-group">
+            <label for="chart-timeframe-baby">Timeframe:</label>
+            <select id="chart-timeframe-baby" class="chart-select">
+              <option value="7">1 Week</option>
+              <option value="14" selected>2 Weeks</option>
+              <option value="30">1 Month</option>
+              <option value="60">2 Months</option>
+              <option value="90">3 Months</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
         </div>
-        <div class="chart-control-group">
-          <label for="chart-interval">Interval:</label>
-          <select id="chart-interval" class="chart-select">
-            <option value="daily" selected>Daily</option>
-            <option value="weekly">Weekly</option>
-          </select>
-        </div>
-        <div class="chart-control-group">
-          <label for="chart-timeframe">Timeframe:</label>
-          <select id="chart-timeframe" class="chart-select">
-            <option value="7">1 Week</option>
-            <option value="14" selected>2 Weeks</option>
-            <option value="30">1 Month</option>
-            <option value="60">2 Months</option>
-            <option value="90">3 Months</option>
-          </select>
-        </div>
+        <canvas id="trend-chart-baby"></canvas>
       </div>
-      <canvas id="trend-chart"></canvas>
+
+      <div class="chart-container">
+        <h3 class="chart-title">Mama Stats</h3>
+        <div class="chart-controls">
+          <div class="chart-control-group">
+            <label for="chart-stat-mama">Stat:</label>
+            <select id="chart-stat-mama" class="chart-select">
+              <option value="pump">Pump (oz)</option>
+              <option value="freeze">Freeze (oz)</option>
+              <option value="h2o">H2O (oz)</option>
+            </select>
+          </div>
+          <div class="chart-control-group">
+            <label for="chart-interval-mama">Interval:</label>
+            <select id="chart-interval-mama" class="chart-select">
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+          <div class="chart-control-group">
+            <label for="chart-timeframe-mama">Timeframe:</label>
+            <select id="chart-timeframe-mama" class="chart-select">
+              <option value="7">1 Week</option>
+              <option value="14" selected>2 Weeks</option>
+              <option value="30">1 Month</option>
+              <option value="60">2 Months</option>
+              <option value="90">3 Months</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+        </div>
+        <canvas id="trend-chart-mama"></canvas>
+      </div>
     </section>
   </main>
   

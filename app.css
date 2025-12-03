@@ -108,6 +108,15 @@ h1{margin:0 0 12px;font-size:20px}
 .event-meta:hover{color:var(--accent);opacity:0.8}
 
 .chart-section{margin-top:24px}
+.chart-container{
+  margin-bottom:32px;
+}
+.chart-title{
+  font-size:16px;
+  font-weight:600;
+  color:#374151;
+  margin-bottom:12px;
+}
 .chart-controls{
   display:flex;
   gap:12px;
@@ -132,7 +141,7 @@ h1{margin:0 0 12px;font-size:20px}
   font-size:14px;
   font-family:inherit;
 }
-#trend-chart{
+#trend-chart-baby, #trend-chart-mama{
   max-height:300px;
   width:100%;
 }
