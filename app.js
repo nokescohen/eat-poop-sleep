@@ -1084,6 +1084,64 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
     }
   }
   
+  // Handle average wake windows calculation
+  if (stat === 'avg_wake_window') {
+    // Initialize wake windows array for each period
+    const wakeWindowsByPeriod = new Map();
+    for (const period of periods) {
+      wakeWindowsByPeriod.set(period.key, []);
+    }
+    
+    let lastSleepEnd = null;
+    let currentSleepStart = null;
+    
+    for (const ev of relevantEvents.sort((a, b) => new Date(a.ts) - new Date(b.ts))) {
+      const evDate = new Date(ev.ts);
+      
+      if (ev.type === 'sleep_start') {
+        // If there was a previous sleep_end, calculate wake window
+        if (lastSleepEnd) {
+          const wakeDuration = evDate - lastSleepEnd;
+          const wakeHours = wakeDuration / (1000 * 60 * 60);
+          
+          // Determine which period this wake window belongs to
+          let periodKey;
+          if (interval === 'daily') {
+            const dayStart = new Date(lastSleepEnd);
+            dayStart.setHours(0, 0, 0, 0);
+            periodKey = dayStart.toISOString().split('T')[0];
+          } else {
+            const weekStart = new Date(lastSleepEnd);
+            weekStart.setHours(0, 0, 0, 0);
+            const dayOfWeek = weekStart.getDay();
+            weekStart.setDate(weekStart.getDate() - dayOfWeek);
+            periodKey = weekStart.toISOString().split('T')[0];
+          }
+          
+          if (periodKey && wakeWindowsByPeriod.has(periodKey)) {
+            wakeWindowsByPeriod.get(periodKey).push(wakeHours);
+          }
+        }
+        currentSleepStart = evDate;
+        lastSleepEnd = null;
+      } else if (ev.type === 'sleep_end' && currentSleepStart) {
+        lastSleepEnd = evDate;
+        currentSleepStart = null;
+      }
+    }
+    
+    // Calculate average wake window for each period
+    for (const period of periods) {
+      const wakeWindows = wakeWindowsByPeriod.get(period.key) || [];
+      if (wakeWindows.length > 0) {
+        const avgWakeWindow = wakeWindows.reduce((sum, w) => sum + w, 0) / wakeWindows.length;
+        dataMap.set(period.key, avgWakeWindow);
+      } else {
+        dataMap.set(period.key, 0);
+      }
+    }
+  }
+  
   // Update periods with actual values
   for (const period of periods) {
     period.value = dataMap.get(period.key) || 0;
@@ -1115,6 +1173,7 @@ function updateChartBaby() {
   const statLabels = {
     feed: 'Feed (oz)',
     sleep: 'Sleep (hours)',
+    avg_wake_window: 'Avg Wake Windows (hours)',
     poop: 'Poop',
     pee: 'Pee',
     antibiotic: 'Antibiotic',
