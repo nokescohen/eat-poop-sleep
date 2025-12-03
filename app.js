@@ -650,6 +650,17 @@ function toggleSleep(){
   render();
 }
 
+function toggleBreast(){
+  if(!breastfeeding){
+    addEvent('breast_start', {});
+    breastfeeding = true;
+  }else{
+    addEvent('breast_end', {});
+    breastfeeding = false;
+  }
+  render();
+}
+
 function editTimestamp(ev){
   // Convert ISO timestamp to datetime-local format (YYYY-MM-DDTHH:mm)
   const d = new Date(ev.ts);
