@@ -935,7 +935,7 @@ function render(){
     
     // Handle session events (paired start/end)
     if(ev.type === 'sleep_session' || ev.type === 'breast_session'){
-      const sessionType = ev.type === 'sleep_session' ? 'Sleep Session' : 'Breast Session';
+      const sessionType = ev.type === 'sleep_session' ? 'Sleep Session' : 'Breastfeed Session';
       label.textContent = `Baby - ${sessionType}`;
       
       const meta = document.createElement('div');
