@@ -1518,7 +1518,7 @@ function updateChartBaby() {
   
   const statLabels = {
     feed: 'Bottle (oz)',
-    breast: 'Breast (hours)',
+    breast: 'Breastfeed (minutes)',
     sleep: 'Sleep (hours)',
     avg_wake_window: 'Avg Wake Windows (hours)',
     poop: 'Poop',
