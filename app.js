@@ -541,11 +541,12 @@ function generateDailySummaryText(eventsToUse = events){
     // Format average wake window
     const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${avgWakeWindow.toFixed(1)} hours` : '';
     
-    // Format breast hours
-    const breastHoursStr = breastHours > 0 ? `${breastHours.toFixed(1)} hours` : '0 hours';
+    // Format breast minutes
+    const breastMinutes = Math.round(breastHours * 60);
+    const breastMinutesStr = breastMinutes > 0 ? `${breastMinutes} minutes` : '0 minutes';
     
     // Build summary line
-    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Breastfed ${breastHoursStr}, Bottle Feed: ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
+    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Breastfed ${breastMinutesStr}, Bottle Feed: ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
     summaries.push(summary);
   }
   
@@ -821,10 +822,11 @@ function render(){
   }
   
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
-  const breastHoursStr = counts.breastHours > 0 ? `${counts.breastHours.toFixed(1)}h` : '0h';
+  const breastMinutes = Math.round(counts.breastHours * 60);
+  const breastMinutesStr = breastMinutes > 0 ? `${breastMinutes}m` : '0m';
   const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
   const dateStr = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Bottle Feed: ${counts.feedOunces}oz, Breastfeed: ${breastHoursStr}, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
+  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Bottle Feed: ${counts.feedOunces}oz, Breastfeed: ${breastMinutesStr}, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
   const mamaStatText = `${dateStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
@@ -1367,6 +1369,64 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
     }
   }
   
+  // Handle breast hours calculation
+  if (stat === 'breast') {
+    const breastSessions = [];
+    let currentBreastStart = null;
+    
+    for (const ev of relevantEvents.sort((a, b) => new Date(a.ts) - new Date(b.ts))) {
+      if (ev.type === 'breast_start') {
+        currentBreastStart = new Date(ev.ts);
+      } else if (ev.type === 'breast_end' && currentBreastStart) {
+        const breastEnd = new Date(ev.ts);
+        const breastHours = (breastEnd - currentBreastStart) / (1000 * 60 * 60);
+        const breastMinutes = Math.round(breastHours * 60); // Convert to minutes
+        
+        // Determine which period this breast session belongs to
+        let periodKey;
+        if (interval === 'daily') {
+          const dayStart = new Date(currentBreastStart);
+          dayStart.setHours(0, 0, 0, 0);
+          periodKey = formatDateLocal(dayStart);
+        } else {
+          const weekStart = new Date(currentBreastStart);
+          weekStart.setHours(0, 0, 0, 0);
+          const dayOfWeek = weekStart.getDay();
+          weekStart.setDate(weekStart.getDate() - dayOfWeek);
+          periodKey = formatDateLocal(weekStart);
+        }
+        
+        if (periodKey && dataMap.has(periodKey)) {
+          dataMap.set(periodKey, dataMap.get(periodKey) + breastMinutes);
+        }
+        
+        currentBreastStart = null;
+      }
+    }
+    
+    // Handle ongoing breast session (if today or within timeframe)
+    if (currentBreastStart && (startDate === null || currentBreastStart >= startDate)) {
+      const now = new Date();
+      const breastHours = (now - currentBreastStart) / (1000 * 60 * 60);
+      const breastMinutes = Math.round(breastHours * 60); // Convert to minutes
+      let periodKey;
+      if (interval === 'daily') {
+        const dayStart = new Date(currentBreastStart);
+        dayStart.setHours(0, 0, 0, 0);
+        periodKey = formatDateLocal(dayStart);
+      } else {
+        const weekStart = new Date(currentBreastStart);
+        weekStart.setHours(0, 0, 0, 0);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek);
+        periodKey = formatDateLocal(weekStart);
+      }
+      if (periodKey && dataMap.has(periodKey)) {
+        dataMap.set(periodKey, dataMap.get(periodKey) + breastMinutes);
+      }
+    }
+  }
+  
   // Handle average wake windows calculation
   if (stat === 'avg_wake_window') {
     // Initialize wake windows array for each period
@@ -1503,8 +1563,10 @@ function updateChartBaby() {
             // Format based on stat type
             if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
               return value.toFixed(1);
-            } else if (stat === 'sleep' || stat === 'breast' || stat === 'avg_wake_window') {
+            } else if (stat === 'sleep' || stat === 'avg_wake_window') {
               return value.toFixed(1) + 'h';
+            } else if (stat === 'breast') {
+              return Math.round(value) + 'm';
             } else {
               return Math.round(value);
             }
