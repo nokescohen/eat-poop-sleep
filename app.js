@@ -849,15 +849,15 @@ elements.btnVitD.addEventListener('click', () => {
 });
 
 elements.btnFeed.addEventListener('click', () => {
-  // Each press = 1 ounce
-  addEvent('feed', { amount: 1 });
+  // Each press = 0.5 ounce
+  addEvent('feed', { amount: 0.5 });
 });
 
 elements.btnSleep.addEventListener('click', toggleSleep);
 
 elements.btnPump.addEventListener('click', () => {
-  // Each press = 1 ounce
-  addEvent('pump', { amount: 1 });
+  // Each press = 0.5 ounce
+  addEvent('pump', { amount: 0.5 });
 });
 
 elements.btnFreeze.addEventListener('click', () => {
