@@ -5,6 +5,7 @@ const EVENTS_COLLECTION = 'events';
 
 const elements = {
   btnSleep: document.getElementById('btn-sleep'),
+  btnBreast: document.getElementById('btn-breast'),
   btnFeed: document.getElementById('btn-feed'),
   btnPoop: document.getElementById('btn-poop'),
   btnPee: document.getElementById('btn-pee'),
@@ -34,6 +35,7 @@ const elements = {
 
 let events = [];
 let sleeping = false;
+let breastfeeding = false;
 let firestoreReady = false;
 let unsubscribeFirestore = null;
 let selectedDate = new Date(); // Default to today
@@ -51,6 +53,7 @@ async function initFirebase(){
     console.warn('Firebase not available, falling back to localStorage');
     events = loadFromLocalStorage();
     sleeping = calcSleepingFromEvents();
+    breastfeeding = calcBreastfeedingFromEvents();
     render();
     return;
   }
@@ -81,6 +84,7 @@ async function initFirebase(){
     }
     
     sleeping = calcSleepingFromEvents();
+    breastfeeding = calcBreastfeedingFromEvents();
     render();
     
     // Set up real-time listener for sync across devices
@@ -90,6 +94,7 @@ async function initFirebase(){
         events.push({ id: doc.id, ...doc.data() });
       });
       sleeping = calcSleepingFromEvents();
+      breastfeeding = calcBreastfeedingFromEvents();
       render();
     });
     
@@ -100,6 +105,7 @@ async function initFirebase(){
     // Fallback to localStorage
     events = loadFromLocalStorage();
     sleeping = calcSleepingFromEvents();
+    breastfeeding = calcBreastfeedingFromEvents();
     render();
   }
 }
@@ -156,6 +162,15 @@ function calcSleepingFromEvents(){
   for(const ev of events){
     if(ev.type === 'sleep_start') return true;
     if(ev.type === 'sleep_end') return false;
+  }
+  return false;
+}
+
+// Determine breastfeeding state from most recent breast event
+function calcBreastfeedingFromEvents(){
+  for(const ev of events){
+    if(ev.type === 'breast_start') return true;
+    if(ev.type === 'breast_end') return false;
   }
   return false;
 }
@@ -402,6 +417,7 @@ function generateDailySummaryText(eventsToUse = events){
     
     // Baby stats
     let sleepHours = 0;
+    let breastHours = 0;
     let feedOunces = 0;
     let poopCount = 0;
     let peeCount = 0;
@@ -495,8 +511,11 @@ function generateDailySummaryText(eventsToUse = events){
     // Format average wake window
     const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${avgWakeWindow.toFixed(1)} hours` : '';
     
+    // Format breast hours
+    const breastHoursStr = breastHours > 0 ? `${breastHours.toFixed(1)} hours` : '0 hours';
+    
     // Build summary line
-    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Fed ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
+    const summary = `${dateStr}\nBaby Stats - Slept ${sleepHoursStr}${wakeWindowStr}, Breastfed ${breastHoursStr}, Bottle: ${feedOunces} oz, ${poopCount} ${poopCount === 1 ? 'poop' : 'poops'}, ${peeCount} ${peeCount === 1 ? 'pee' : 'pees'}, Antibiotic: ${antibioticCount}, Wound Clean: ${woundCleanCount}, Vit D: ${vitDCount}\nMama Stats - Pumped ${pumpOunces} oz, Froze ${freezeOunces} oz, Drank ${h2oOunces} oz\n`;
     summaries.push(summary);
   }
   
@@ -659,6 +678,8 @@ function render(){
   elements.sleepStatus.textContent = sleeping ? 'Sleeping' : 'Awake';
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
+  // update breast button text
+  elements.btnBreast.textContent = breastfeeding ? 'Stop Breast' : 'Breast';
 
   // stats: counts for selected date (from 00:00:00 to 23:59:59.999 in local timezone)
   // Use local timezone to avoid timezone conversion issues
@@ -667,7 +688,7 @@ function render(){
   const day = selectedDate.getDate();
   const dateStart = new Date(year, month, day, 0, 0, 0, 0);
   const dateEnd = new Date(year, month, day, 23, 59, 59, 999);
-  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0, vitD:0 };
+  const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, breastHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0, vitD:0 };
   
   // Get all events from selected date, sorted chronologically
   // Also include events from the day before to catch wake windows that span dates
@@ -679,9 +700,10 @@ function render(){
     return evDate >= prevDayStart && evDate <= dateEnd;
   }).sort((a, b) => new Date(a.ts) - new Date(b.ts));
   
-  // Calculate sleep hours and wake windows
+  // Calculate sleep hours, breast hours, and wake windows
   let currentSleepStart = null;
   let lastSleepEnd = null;
+  let currentBreastStart = null;
   
   for(const ev of recentEvents){
     const t = new Date(ev.ts);
@@ -705,6 +727,16 @@ function render(){
       }
       lastSleepEnd = t;
       currentSleepStart = null;
+    } else if(ev.type === 'breast_start'){
+      currentBreastStart = t;
+    } else if(ev.type === 'breast_end' && currentBreastStart){
+      const breastDuration = t - currentBreastStart;
+      const breastHours = breastDuration / (1000 * 60 * 60);
+      // Only count breast hours that occur on the selected date
+      if(t >= dateStart && t <= dateEnd){
+        counts.breastHours += breastHours;
+      }
+      currentBreastStart = null;
     }
     
     // Count other events
@@ -729,6 +761,13 @@ function render(){
     const sleepDuration = now - currentSleepStart;
     const sleepHours = sleepDuration / (1000 * 60 * 60);
     counts.sleepHours += sleepHours;
+  }
+  
+  // Handle ongoing breast session (breast_start without matching breast_end)
+  if(currentBreastStart && isToday){
+    const breastDuration = now - currentBreastStart;
+    const breastHours = breastDuration / (1000 * 60 * 60);
+    counts.breastHours += breastHours;
   }
   
   // Calculate average wake window
@@ -830,8 +869,10 @@ function prettyLabel(ev){
   if(ev.type === 'vit_d') return 'Baby - Vit D Drop';
   if(ev.type === 'feed'){
     const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
-    return `Baby - Feed${amt}`;
+    return `Baby - Bottle${amt}`;
   }
+  if(ev.type === 'breast_start') return 'Baby - Breast — start';
+  if(ev.type === 'breast_end') return 'Baby - Breast — end';
   if(ev.type === 'pump'){
     const amt = ev.data && ev.data.amount ? ` ${ev.data.amount}oz` : '';
     return `Mama - Pump${amt}`;
@@ -869,6 +910,8 @@ elements.btnWoundClean.addEventListener('click', () => {
 elements.btnVitD.addEventListener('click', () => {
   addEvent('vit_d', {});
 });
+
+elements.btnBreast.addEventListener('click', toggleBreast);
 
 elements.btnFeed.addEventListener('click', () => {
   // Each press = 0.5 ounce
@@ -1020,6 +1063,9 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
     } else if (stat === 'sleep' && (ev.type === 'sleep_start' || ev.type === 'sleep_end')) {
       // Sleep requires special handling - we'll calculate hours between sleep_start and sleep_end
       // For now, we'll track this separately
+      continue; // Skip for now, will handle below
+    } else if (stat === 'breast' && (ev.type === 'breast_start' || ev.type === 'breast_end')) {
+      // Breast requires special handling - we'll calculate hours between breast_start and breast_end
       continue; // Skip for now, will handle below
     } else if (stat === 'poop' && ev.type === 'poop') {
       value = 1;
@@ -1190,7 +1236,8 @@ function updateChartBaby() {
   const values = data.map(d => d.value);
   
   const statLabels = {
-    feed: 'Feed (oz)',
+    feed: 'Bottle (oz)',
+    breast: 'Breast (hours)',
     sleep: 'Sleep (hours)',
     avg_wake_window: 'Avg Wake Windows (hours)',
     poop: 'Poop',
@@ -1235,7 +1282,7 @@ function updateChartBaby() {
             // Format based on stat type
             if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
               return value.toFixed(1);
-            } else if (stat === 'sleep' || stat === 'avg_wake_window') {
+            } else if (stat === 'sleep' || stat === 'breast' || stat === 'avg_wake_window') {
               return value.toFixed(1) + 'h';
             } else {
               return Math.round(value);
@@ -1387,7 +1434,7 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
-  render();
+render();
   // Initialize charts after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {

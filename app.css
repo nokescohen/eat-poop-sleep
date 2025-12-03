@@ -43,6 +43,7 @@ h1{margin:0 0 12px;font-size:20px}
   box-shadow:0 3px 8px var(--glass);
 }
 .sleep{background:linear-gradient(180deg,#8b5cf6,#7c3aed)}
+.breast{background:linear-gradient(180deg,#f472b6,#ec4899)}
 .feed{background:linear-gradient(180deg,#3b82f6,#2563eb)}
 .poop{background:linear-gradient(180deg,#92400e,#78350f)}
 .pee{background:linear-gradient(180deg,#eab308,#ca8a04)}
