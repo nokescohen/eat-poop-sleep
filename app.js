@@ -1265,7 +1265,9 @@ function updateChartMama() {
   const data = aggregateDataForChart(stat, interval, timeframe);
   
   const labels = data.map(d => {
-    const date = new Date(d.key);
+    // Parse the date string (YYYY-MM-DD) in local timezone
+    const [year, month, day] = d.key.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     if (interval === 'daily') {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } else {
