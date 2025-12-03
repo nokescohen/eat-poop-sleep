@@ -1136,6 +1136,12 @@ initFirebase().then(() => {
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
   render();
+  // Initialize chart after render
+  setTimeout(() => {
+    if (typeof Chart !== 'undefined') {
+      updateChart();
+    }
+  }, 100);
 }).catch(error => {
   console.error('Failed to initialize:', error);
   // Fallback: render with localStorage data
@@ -1143,7 +1149,13 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
-render();
+  render();
+  // Initialize chart after render
+  setTimeout(() => {
+    if (typeof Chart !== 'undefined') {
+      updateChart();
+    }
+  }, 100);
 });
 
 // Register service worker for PWA functionality
