@@ -816,10 +816,12 @@ function render(){
 
   // Daily Log - show only events from selected date
   elements.history.innerHTML = '';
+  console.log('Total events:', events.length);
   const allLogEvents = events.filter(ev => {
     const evDate = new Date(ev.ts);
     return evDate >= dateStart && evDate <= dateEnd;
   }).sort((a, b) => new Date(a.ts) - new Date(b.ts)); // Sort chronologically for pairing
+  console.log('Filtered events for selected date:', allLogEvents.length);
   
   // Pair up sleep and breast sessions
   const processedEvents = [];
@@ -901,6 +903,7 @@ function render(){
   
   // Sort by timestamp, most recent first
   processedEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  console.log('Processed events to display:', processedEvents.length);
   
   for(const ev of processedEvents){
     const li = document.createElement('li');
