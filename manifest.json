@@ -2,7 +2,7 @@
   "name": "Eat • Poop • Sleep Tracker",
   "short_name": "EPS Tracker",
   "description": "Track baby and mama stats - feeds, sleep, diapers, and more",
-  "start_url": "/",
+  "start_url": "/eat-poop-sleep/",
   "display": "standalone",
   "background_color": "#fcfcfd",
   "theme_color": "#0b84ff",
