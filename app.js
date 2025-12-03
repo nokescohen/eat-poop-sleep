@@ -19,6 +19,7 @@ const elements = {
   btnExportSummary: document.getElementById('btn-export-summary'),
   btnExportData: document.getElementById('btn-export-data'),
   btnImportData: document.getElementById('btn-import-data'),
+  btnTestEmail: document.getElementById('btn-test-email'),
   btnClear: document.getElementById('btn-clear'),
 };
 
@@ -526,13 +527,14 @@ function shouldSendDailyEmail(){
   return isPastSendTime && lastSentDate !== todayKey;
 }
 
-async function sendDailySummaryEmail(){
-  if(events.length === 0) return; // No events to send
+// Send test email (for immediate testing)
+async function sendTestEmail(){
+  if(events.length === 0){
+    alert('No events to send. Add some events first!');
+    return;
+  }
   
-  // Check if we should send
-  if(!shouldSendDailyEmail()) return;
-  
-  // Get today's summary (sending at end of day for today's events)
+  // Get today's summary
   const today = new Date();
   const todayKey = today.toISOString().split('T')[0];
   
@@ -542,51 +544,33 @@ async function sendDailySummaryEmail(){
     return evDate === todayKey;
   });
   
-  if(todayEvents.length === 0) return; // No events today
-  
-  const summaryText = generateDailySummaryText(todayEvents);
-  
-  // Initialize EmailJS if not already initialized
-  if(typeof emailjs === 'undefined'){
-    console.error('EmailJS not loaded. Please check the script tag.');
-    return;
+  if(todayEvents.length === 0){
+    alert('No events for today. The summary will be empty.');
   }
   
-  try{
-    // Initialize EmailJS
-    emailjs.init(EMAILJS_CONFIG.publicKey);
-    
-    // Send email to both recipients
-    const today = new Date();
-    const emailParams = {
-      to_email: 'ben@cohen-family.org,anokheecohen@gmail.com',
-      subject: `Daily Summary - ${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
-      message: summaryText
-    };
-    
-    await emailjs.send(
-      EMAILJS_CONFIG.serviceId,
-      EMAILJS_CONFIG.templateId,
-      emailParams
-    );
-    
-    // Mark as sent for today
-    localStorage.setItem(LAST_EMAIL_SENT_KEY, getTodayDateKey());
-    console.log('Daily summary email sent successfully');
-  } catch(error){
-    console.error('Failed to send email:', error);
-  }
+  const summaryText = generateDailySummaryText(todayEvents.length > 0 ? todayEvents : events.slice(0, 10)); // Use today's or last 10 events
+  
+  // For now, show the summary and allow copying
+  // In production, this would call an API endpoint
+  const emailBody = `Daily Summary - ${today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}\n\n${summaryText}`;
+  
+  // Copy to clipboard and show
+  navigator.clipboard.writeText(emailBody).then(() => {
+    alert(`Test email summary copied to clipboard!\n\nTo: anokheecohen@gmail.com, ben@cohen-family.org\n\nYou can paste it into an email. The automated daily emails will be sent via GitHub Actions at 23:59 each day.`);
+  }).catch(() => {
+    // Fallback: show in alert
+    alert(`Test Email Summary:\n\n${emailBody}\n\n(Note: Automated emails will be sent daily at 23:59 via GitHub Actions)`);
+  });
+  
+  // Also log to console for debugging
+  console.log('Test email summary:', emailBody);
 }
 
 // Set up daily email check - runs every minute
+// Note: Actual emails are sent via GitHub Actions at 23:59 daily
 function setupDailyEmailCheck(){
-  // Check immediately
-  sendDailySummaryEmail();
-  
-  // Then check every minute
-  setInterval(() => {
-    sendDailySummaryEmail();
-  }, 60 * 1000); // Check every minute
+  // This function is kept for compatibility but emails are now sent via GitHub Actions
+  console.log('Daily emails are configured to send via GitHub Actions at 23:59 daily');
 }
 
 function toggleSleep(){
@@ -853,6 +837,7 @@ elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 elements.btnExportData.addEventListener('click', exportData);
 elements.btnImportData.addEventListener('click', importData);
+elements.btnTestEmail.addEventListener('click', sendTestEmail);
 elements.btnClear.addEventListener('click', clearAll);
 
 // Initialize Firebase and start app
