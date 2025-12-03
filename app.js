@@ -650,9 +650,13 @@ function render(){
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
 
-  // stats: counts for selected date (from 00:00:00 to 23:59:59.999)
-  const dateStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 0, 0, 0, 0);
-  const dateEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 23, 59, 59, 999);
+  // stats: counts for selected date (from 00:00:00 to 23:59:59.999 in local timezone)
+  // Use local timezone to avoid timezone conversion issues
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth();
+  const day = selectedDate.getDate();
+  const dateStart = new Date(year, month, day, 0, 0, 0, 0);
+  const dateEnd = new Date(year, month, day, 23, 59, 59, 999);
   const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0, vitD:0 };
   
   // Get all events from selected date, sorted chronologically
@@ -878,9 +882,14 @@ elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
 // Initialize date picker to today
-elements.datePicker.valueAsDate = new Date();
+const today = new Date();
+const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+elements.datePicker.value = todayStr;
 elements.datePicker.addEventListener('change', (e) => {
-  selectedDate = new Date(e.target.value);
+  // Parse the date string in local timezone to avoid timezone issues
+  const dateStr = e.target.value; // Format: YYYY-MM-DD
+  const [year, month, day] = dateStr.split('-').map(Number);
+  selectedDate = new Date(year, month - 1, day); // month is 0-indexed
   render();
 });
 
@@ -889,13 +898,17 @@ initFirebase().then(() => {
   // Set up daily email check
   setupDailyEmailCheck();
   // Initialize date picker after Firebase loads
-  elements.datePicker.valueAsDate = new Date();
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  elements.datePicker.value = todayStr;
   selectedDate = new Date();
   render();
 }).catch(error => {
   console.error('Failed to initialize:', error);
   // Fallback: render with localStorage data
-  elements.datePicker.valueAsDate = new Date();
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  elements.datePicker.value = todayStr;
   selectedDate = new Date();
   render();
 });
