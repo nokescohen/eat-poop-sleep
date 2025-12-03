@@ -938,8 +938,8 @@ function render(){
       left.appendChild(meta);
       
       const del = document.createElement('button');
-      del.textContent = '×';
-      del.className = 'delete-btn';
+      del.textContent = '⋯';
+      del.title = 'Delete';
       del.onclick = async () => {
         if(confirm('Delete this session?')){
           // Delete both start and end events
