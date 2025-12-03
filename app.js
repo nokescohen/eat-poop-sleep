@@ -829,7 +829,14 @@ function render(){
   
   // First, pair up completed sessions
   for(let i = 0; i < allLogEvents.length; i++){
-    if(usedEventIds.has(allLogEvents[i].id)) continue;
+    const eventId = allLogEvents[i].id;
+    if(!eventId){
+      console.warn('Event missing ID:', allLogEvents[i]);
+      // Add events without IDs directly
+      processedEvents.push(allLogEvents[i]);
+      continue;
+    }
+    if(usedEventIds.has(eventId)) continue;
     
     const ev = allLogEvents[i];
     
