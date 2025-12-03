@@ -1146,6 +1146,27 @@ function updateChartBaby() {
         legend: {
           display: true,
           position: 'top'
+        },
+        datalabels: {
+          display: true,
+          color: '#374151',
+          anchor: 'end',
+          align: 'top',
+          formatter: function(value) {
+            if (value === 0) return '';
+            // Format based on stat type
+            if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
+              return value.toFixed(1);
+            } else if (stat === 'sleep') {
+              return value.toFixed(1) + 'h';
+            } else {
+              return Math.round(value);
+            }
+          },
+          font: {
+            size: 10,
+            weight: 'bold'
+          }
         }
       },
       scales: {
@@ -1153,7 +1174,8 @@ function updateChartBaby() {
           beginAtZero: true
         }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
@@ -1207,6 +1229,27 @@ function updateChartMama() {
         legend: {
           display: true,
           position: 'top'
+        },
+        datalabels: {
+          display: true,
+          color: '#374151',
+          anchor: 'end',
+          align: 'top',
+          formatter: function(value) {
+            if (value === 0) return '';
+            // Format based on stat type
+            if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
+              return value.toFixed(1);
+            } else if (stat === 'sleep') {
+              return value.toFixed(1) + 'h';
+            } else {
+              return Math.round(value);
+            }
+          },
+          font: {
+            size: 10,
+            weight: 'bold'
+          }
         }
       },
       scales: {
@@ -1214,7 +1257,8 @@ function updateChartMama() {
           beginAtZero: true
         }
       }
-    }
+    },
+    plugins: [ChartDataLabels]
   });
 }
 
