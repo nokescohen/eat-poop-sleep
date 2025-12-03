@@ -961,9 +961,8 @@ function render(){
         }
       };
       
-      right.appendChild(del);
       li.appendChild(left);
-      li.appendChild(right);
+      li.appendChild(del);
       elements.history.appendChild(li);
       continue;
     }
