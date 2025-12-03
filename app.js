@@ -670,9 +670,13 @@ function render(){
   const counts = { pee:0, poop:0, feedOunces:0, sleepHours:0, wakeWindows:[], pumpOunces:0, freezeOunces:0, h2oOunces:0, antibiotic:0, woundClean:0, vitD:0 };
   
   // Get all events from selected date, sorted chronologically
+  // Also include events from the day before to catch wake windows that span dates
+  const prevDayStart = new Date(dateStart);
+  prevDayStart.setDate(prevDayStart.getDate() - 1);
+  
   const recentEvents = events.filter(ev => {
     const evDate = new Date(ev.ts);
-    return evDate >= dateStart && evDate <= dateEnd;
+    return evDate >= prevDayStart && evDate <= dateEnd;
   }).sort((a, b) => new Date(a.ts) - new Date(b.ts));
   
   // Calculate sleep hours and wake windows
@@ -684,7 +688,8 @@ function render(){
     
     if(ev.type === 'sleep_start'){
       // If there was a previous sleep_end, calculate wake window
-      if(lastSleepEnd){
+      // Only count wake windows that end on the selected date (sleep_start on selected date)
+      if(lastSleepEnd && t >= dateStart && t <= dateEnd){
         const wakeDuration = t - lastSleepEnd;
         const wakeHours = wakeDuration / (1000 * 60 * 60);
         counts.wakeWindows.push(wakeHours);
@@ -694,7 +699,10 @@ function render(){
     } else if(ev.type === 'sleep_end' && currentSleepStart){
       const sleepDuration = t - currentSleepStart;
       const sleepHours = sleepDuration / (1000 * 60 * 60);
-      counts.sleepHours += sleepHours;
+      // Only count sleep hours that occur on the selected date
+      if(t >= dateStart && t <= dateEnd){
+        counts.sleepHours += sleepHours;
+      }
       lastSleepEnd = t;
       currentSleepStart = null;
     }
@@ -1105,13 +1113,14 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
           const wakeHours = wakeDuration / (1000 * 60 * 60);
           
           // Determine which period this wake window belongs to
+          // Assign to the period where the sleep_start occurs (when baby wakes up)
           let periodKey;
           if (interval === 'daily') {
-            const dayStart = new Date(lastSleepEnd);
+            const dayStart = new Date(evDate);
             dayStart.setHours(0, 0, 0, 0);
             periodKey = dayStart.toISOString().split('T')[0];
           } else {
-            const weekStart = new Date(lastSleepEnd);
+            const weekStart = new Date(evDate);
             weekStart.setHours(0, 0, 0, 0);
             const dayOfWeek = weekStart.getDay();
             weekStart.setDate(weekStart.getDate() - dayOfWeek);
