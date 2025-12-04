@@ -164,19 +164,18 @@ function saveToLocalStorage(){
 function calcSleepingFromEvents(){
   if(events.length === 0) return false;
   
-  // Sort events by timestamp, newest first, to find the most recent sleep event
-  const sorted = [...events].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  // Get all sleep events and sort by timestamp, newest first
+  const sleepEvents = events.filter(ev => ev.type === 'sleep_start' || ev.type === 'sleep_end');
+  if(sleepEvents.length === 0) return false;
   
-  // Find the most recent sleep-related event (either sleep_start or sleep_end)
-  for(const ev of sorted){
-    if(ev.type === 'sleep_start' || ev.type === 'sleep_end'){
-      console.log('Most recent sleep event:', ev.type, 'at', ev.ts);
-      return ev.type === 'sleep_start';
-    }
-  }
+  // Sort by timestamp, newest first
+  sleepEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
   
-  // No sleep events found
-  return false;
+  // The first event in the sorted array is the most recent
+  const mostRecent = sleepEvents[0];
+  console.log('calcSleepingFromEvents: Most recent sleep event:', mostRecent.type, 'at', mostRecent.ts, 'Total sleep events:', sleepEvents.length);
+  
+  return mostRecent.type === 'sleep_start';
 }
 
 // Determine breastfeeding state from most recent breast event
