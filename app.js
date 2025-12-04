@@ -94,6 +94,8 @@ async function initFirebase(){
       snapshot.forEach((doc) => {
         events.push({ id: doc.id, ...doc.data() });
       });
+      // Ensure events are sorted by timestamp (newest first) after loading from Firebase
+      events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
       sleeping = calcSleepingFromEvents();
       breastfeeding = calcBreastfeedingFromEvents();
       render();
