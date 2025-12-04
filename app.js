@@ -173,9 +173,11 @@ function calcSleepingFromEvents(){
   
   // The first event in the sorted array is the most recent
   const mostRecent = sleepEvents[0];
-  console.log('calcSleepingFromEvents: Most recent sleep event:', mostRecent.type, 'at', mostRecent.ts, 'Total sleep events:', sleepEvents.length);
+  const result = mostRecent.type === 'sleep_start';
   
-  return mostRecent.type === 'sleep_start';
+  console.log('calcSleepingFromEvents: Most recent sleep event:', mostRecent.type, 'at', mostRecent.ts, 'Total sleep events:', sleepEvents.length, '→ sleeping =', result);
+  
+  return result;
 }
 
 // Determine breastfeeding state from most recent breast event
@@ -655,21 +657,24 @@ function setupDailyEmailCheck(){
 }
 
 function toggleSleep(){
-  console.log('toggleSleep called, current sleeping state:', sleeping);
-  console.log('Events before toggle:', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})));
+  console.log('=== toggleSleep called ===');
+  console.log('Current sleeping state:', sleeping);
+  console.log('Events before toggle:', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})).slice(0, 5));
   
-  if(!sleeping){
-    addEvent('sleep_start', {});
-  }else{
-    addEvent('sleep_end', {});
-  }
+  const eventTypeToAdd = !sleeping ? 'sleep_start' : 'sleep_end';
+  console.log('Adding event:', eventTypeToAdd);
   
-  // Recalculate sleeping state from events to ensure accuracy
-  // This is important because addEvent() calls save() which may trigger
-  // Firebase real-time updates, and we want the state to be correct
+  addEvent(eventTypeToAdd, {});
+  
+  // Give addEvent a moment to add the event to the array, then recalculate
+  // Note: addEvent() adds the event synchronously to the events array before calling save()
   sleeping = calcSleepingFromEvents();
-  console.log('Events after toggle:', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})));
+  
+  console.log('Events after toggle (first 5):', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})).slice(0, 5));
   console.log('New sleeping state:', sleeping);
+  console.log('Button should now show:', sleeping ? 'Wake' : 'Sleep');
+  console.log('=== end toggleSleep ===');
+  
   render();
 }
 
