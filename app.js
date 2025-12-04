@@ -1509,7 +1509,16 @@ async function processBulkImport(input){
   render();
 }
 
-elements.btnBulkImport.addEventListener('click', bulkImportEvents);
+if(elements.btnBulkImport){
+  elements.btnBulkImport.addEventListener('click', (e) => {
+    console.log('Bulk import button clicked');
+    e.preventDefault();
+    bulkImportEvents();
+  });
+  console.log('Bulk import button event listener attached');
+} else {
+  console.error('Bulk import button not found in DOM');
+}
 
 elements.btnClearCache.addEventListener('click', async () => {
   if(confirm('This will clear the cache and reload the page. Continue?')){
