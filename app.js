@@ -211,9 +211,9 @@ function calcSleepingFromEvents(){
   // If we only found a sleep_end (no sleep_start), we're awake
   if(mostRecentEnd && !mostRecentStart){
     console.log('calcSleepingFromEvents: Found sleep_end but no sleep_start → sleeping = false');
-    return false;
-  }
-  
+  return false;
+}
+
   // Fallback: should never reach here, but just in case
   return false;
 }
@@ -313,6 +313,65 @@ async function undoLast(){
     }
   } else {
   save();
+  }
+}
+
+// Delete all future-dated events (they shouldn't exist)
+async function deleteFutureEvents(){
+  const now = new Date();
+  const futureEvents = events.filter(ev => {
+    const evTime = new Date(ev.ts);
+    return evTime > now;
+  });
+  
+  if(futureEvents.length === 0){
+    console.log('No future-dated events found.');
+    return;
+  }
+  
+  console.log(`Found ${futureEvents.length} future-dated event(s) to delete:`, futureEvents.map(e => ({type: e.type, ts: e.ts})));
+  
+  if(firestoreReady && isFirebaseAvailable()){
+    try{
+      const { collection, doc, deleteDoc } = window.firestoreFunctions;
+      const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      
+      const deletePromises = futureEvents.map(ev => {
+        return deleteDoc(doc(eventsRef, ev.id));
+      });
+      
+      await Promise.all(deletePromises);
+      // Remove from local events array
+      events = events.filter(ev => {
+        const evTime = new Date(ev.ts);
+        return evTime <= now;
+      });
+      // Recalculate states
+      sleeping = calcSleepingFromEvents();
+      breastfeeding = calcBreastfeedingFromEvents();
+      // Real-time listener will update UI
+      console.log(`Deleted ${futureEvents.length} future-dated event(s).`);
+    } catch(error){
+      console.error('Error deleting future events:', error);
+      // Fallback: remove from local array
+      events = events.filter(ev => {
+        const evTime = new Date(ev.ts);
+        return evTime <= now;
+      });
+      sleeping = calcSleepingFromEvents();
+      breastfeeding = calcBreastfeedingFromEvents();
+      save();
+    }
+  } else {
+    // Remove from local array
+    events = events.filter(ev => {
+      const evTime = new Date(ev.ts);
+      return evTime <= now;
+    });
+    sleeping = calcSleepingFromEvents();
+    breastfeeding = calcBreastfeedingFromEvents();
+    save();
+    console.log(`Deleted ${futureEvents.length} future-dated event(s) from local storage.`);
   }
 }
 
@@ -601,8 +660,9 @@ function generateDailySummaryText(eventsToUse = events){
     // Format sleep hours
     const sleepHoursStr = sleepHours > 0 ? `${sleepHours.toFixed(1)} hours` : '0 hours';
     
-    // Format average wake window
-    const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${avgWakeWindow.toFixed(1)} hours` : '';
+    // Format average wake window in minutes
+    const wakeWindowMinutes = Math.round(avgWakeWindow * 60);
+    const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake window: ${wakeWindowMinutes} minutes` : '';
     
     // Format breast minutes
     const breastMinutes = Math.round(breastHours * 60);
@@ -910,7 +970,8 @@ function render(){
   const sleepHoursStr = counts.sleepHours > 0 ? `${counts.sleepHours.toFixed(1)}h` : '0h';
   const breastMinutes = Math.round(counts.breastHours * 60);
   const breastMinutesStr = breastMinutes > 0 ? `${breastMinutes}m` : '0m';
-  const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${avgWakeWindow.toFixed(1)}h` : 'No wake windows';
+  const wakeWindowMinutes = Math.round(avgWakeWindow * 60);
+  const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${wakeWindowMinutes}m` : 'No wake windows';
   const dateStr = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Bottle Feed: ${counts.feedOunces}oz, Breastfeed: ${breastMinutesStr}, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}`;
   const mamaStatText = `${dateStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
@@ -1619,7 +1680,7 @@ function updateChartBaby() {
     feed: 'Bottle (oz)',
     breast: 'Breastfeed (minutes)',
     sleep: 'Sleep (hours)',
-    avg_wake_window: 'Avg Wake Windows (hours)',
+    avg_wake_window: 'Avg Wake Windows (minutes)',
     poop: 'Poop',
     pee: 'Pee',
     antibiotic: 'Antibiotic',
@@ -1662,8 +1723,10 @@ function updateChartBaby() {
             // Format based on stat type
             if (stat === 'feed' || stat === 'pump' || stat === 'freeze' || stat === 'h2o') {
               return value.toFixed(1);
-            } else if (stat === 'sleep' || stat === 'avg_wake_window') {
+            } else if (stat === 'sleep') {
               return value.toFixed(1) + 'h';
+            } else if (stat === 'avg_wake_window') {
+              return Math.round(value) + 'm';
             } else if (stat === 'breast') {
               return Math.round(value) + 'm';
             } else {
