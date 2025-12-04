@@ -1101,12 +1101,25 @@ function render(){
       meta.title = 'Click to edit times';
       meta.onclick = () => {
         // When editing a session, allow editing both start and end times
+        // Use the same format as regular events: YYYY-MM-DD HH:MM
         const now = new Date();
-        const startTimeStr = prompt('Edit start time (format: YYYY-MM-DDTHH:mm):', new Date(ev.startEvent.ts).toISOString().slice(0, 16));
+        
+        // Format start time for prompt (YYYY-MM-DD HH:MM)
+        const startDate = new Date(ev.startEvent.ts);
+        const startYear = startDate.getFullYear();
+        const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+        const startDay = String(startDate.getDate()).padStart(2, '0');
+        const startHours = String(startDate.getHours()).padStart(2, '0');
+        const startMinutes = String(startDate.getMinutes()).padStart(2, '0');
+        const startDateTimeLocal = `${startYear}-${startMonth}-${startDay} ${startHours}:${startMinutes}`;
+        
+        const startTimeStr = prompt('Edit start time (YYYY-MM-DD HH:MM):', startDateTimeLocal);
         if(startTimeStr){
-          const newStartDate = new Date(startTimeStr);
+          // Parse the input - handle both "YYYY-MM-DD HH:MM" and "YYYY-MM-DDTHH:MM" formats
+          const startDateTimeStr = startTimeStr.replace(' ', 'T');
+          const newStartDate = new Date(startDateTimeStr);
           if(isNaN(newStartDate.getTime())){
-            alert('Invalid date/time format.');
+            alert('Invalid date/time format. Please use YYYY-MM-DD HH:MM');
             return;
           }
           if(newStartDate > now){
@@ -1116,11 +1129,23 @@ function render(){
           ev.startEvent.ts = newStartDate.toISOString();
           save();
         }
-        const endTimeStr = prompt('Edit end time (format: YYYY-MM-DDTHH:mm):', new Date(ev.endEvent.ts).toISOString().slice(0, 16));
+        
+        // Format end time for prompt (YYYY-MM-DD HH:MM)
+        const endDate = new Date(ev.endEvent.ts);
+        const endYear = endDate.getFullYear();
+        const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
+        const endDay = String(endDate.getDate()).padStart(2, '0');
+        const endHours = String(endDate.getHours()).padStart(2, '0');
+        const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
+        const endDateTimeLocal = `${endYear}-${endMonth}-${endDay} ${endHours}:${endMinutes}`;
+        
+        const endTimeStr = prompt('Edit end time (YYYY-MM-DD HH:MM):', endDateTimeLocal);
         if(endTimeStr){
-          const newEndDate = new Date(endTimeStr);
+          // Parse the input - handle both "YYYY-MM-DD HH:MM" and "YYYY-MM-DDTHH:MM" formats
+          const endDateTimeStr = endTimeStr.replace(' ', 'T');
+          const newEndDate = new Date(endDateTimeStr);
           if(isNaN(newEndDate.getTime())){
-            alert('Invalid date/time format.');
+            alert('Invalid date/time format. Please use YYYY-MM-DD HH:MM');
             return;
           }
           if(newEndDate > now){
