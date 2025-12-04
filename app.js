@@ -648,11 +648,13 @@ function setupDailyEmailCheck(){
 function toggleSleep(){
   if(!sleeping){
     addEvent('sleep_start', {});
-    sleeping = true;
   }else{
     addEvent('sleep_end', {});
-    sleeping = false;
   }
+  // Recalculate sleeping state from events to ensure accuracy
+  // This is important because addEvent() calls save() which may trigger
+  // Firebase real-time updates, and we want the state to be correct
+  sleeping = calcSleepingFromEvents();
   render();
 }
 
