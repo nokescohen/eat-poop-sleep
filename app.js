@@ -1467,6 +1467,108 @@ function addBulkImportRow(container){
   container.appendChild(row);
 }
 
+// Process bulk import from form rows
+async function processBulkImportFromForm(rowsContainer){
+  const rows = rowsContainer.querySelectorAll('.bulk-import-row');
+  const now = new Date();
+  const importedEvents = [];
+  const errors = [];
+  
+  for(let i = 0; i < rows.length; i++){
+    const row = rows[i];
+    const dateInput = row.querySelector('.bulk-import-date');
+    const timeInput = row.querySelector('.bulk-import-time');
+    const actionSelect = row.querySelector('.bulk-import-action');
+    const amountInput = row.querySelector('.bulk-import-amount');
+    
+    // Skip empty rows
+    if(!actionSelect || !actionSelect.value){
+      continue;
+    }
+    
+    try {
+      // Get date and time
+      const dateStr = dateInput ? dateInput.value : '';
+      const timeStr = timeInput ? timeInput.value : '';
+      
+      if(!dateStr || !timeStr){
+        errors.push(`Row ${i+1}: Date and time are required`);
+        continue;
+      }
+      
+      // Combine date and time
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const date = new Date(year, month - 1, day, hour, minute);
+      
+      if(isNaN(date.getTime())){
+        errors.push(`Row ${i+1}: Invalid date/time`);
+        continue;
+      }
+      
+      if(date > now){
+        errors.push(`Row ${i+1}: Date/time is in the future`);
+        continue;
+      }
+      
+      // Get event type
+      const eventType = actionSelect.value;
+      
+      // Create event data
+      const eventData = {};
+      const needsAmount = ['feed', 'pump', 'freeze', 'h2o'].includes(eventType);
+      if(needsAmount){
+        const amount = amountInput ? parseFloat(amountInput.value) : 0;
+        if(isNaN(amount) || amount <= 0){
+          errors.push(`Row ${i+1}: Valid amount required for ${eventType}`);
+          continue;
+        }
+        eventData.amount = amount;
+      }
+      
+      // Create event
+      const ev = {
+        id: Date.now().toString() + Math.random().toString(36).slice(2,6) + '_' + i,
+        type: eventType,
+        ts: date.toISOString(),
+        data: eventData
+      };
+      
+      importedEvents.push(ev);
+    } catch(error){
+      errors.push(`Row ${i+1}: Error - ${error.message}`);
+    }
+  }
+  
+  if(importedEvents.length === 0){
+    alert('No valid events to import.\n\nPlease fill in at least one row with an action selected.' + (errors.length > 0 ? '\n\nErrors:\n' + errors.join('\n') : ''));
+    return;
+  }
+  
+  // Show summary and ask for confirmation
+  const summary = `Found ${importedEvents.length} valid event(s) to import.`;
+  const errorMsg = errors.length > 0 ? `\n\n${errors.length} error(s) encountered:\n${errors.slice(0, 10).join('\n')}${errors.length > 10 ? `\n... and ${errors.length - 10} more` : ''}` : '';
+  
+  if(!confirm(summary + errorMsg + '\n\nImport these events?')){
+    return;
+  }
+  
+  // Add events to the array
+  events = [...importedEvents, ...events];
+  
+  // Re-sort by timestamp (newest first)
+  events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  
+  // Recalculate states
+  sleeping = calcSleepingFromEvents();
+  breastfeeding = calcBreastfeedingFromEvents();
+  
+  // Save
+  await save();
+  
+  alert(`Successfully imported ${importedEvents.length} event(s)!`);
+  render();
+}
 
 if(elements.btnBulkImport){
   elements.btnBulkImport.addEventListener('click', (e) => {
