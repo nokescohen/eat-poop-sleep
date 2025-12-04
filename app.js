@@ -1369,9 +1369,17 @@ function bulkImportEvents(){
   };
   
   // Submit button
-  submitBtn.onclick = async () => {
-    await processBulkImportFromForm(rowsContainer);
-    closeModal();
+  submitBtn.onclick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Submit button clicked');
+    try {
+      await processBulkImportFromForm(rowsContainer);
+      closeModal();
+    } catch(error) {
+      console.error('Error in bulk import:', error);
+      alert('Error importing events: ' + error.message);
+    }
   };
   
   // Close on background click
@@ -1469,7 +1477,14 @@ function addBulkImportRow(container){
 
 // Process bulk import from form rows
 async function processBulkImportFromForm(rowsContainer){
+  console.log('processBulkImportFromForm called', rowsContainer);
+  if(!rowsContainer){
+    alert('Error: Form container not found');
+    return;
+  }
+  
   const rows = rowsContainer.querySelectorAll('.bulk-import-row');
+  console.log('Found rows:', rows.length);
   const now = new Date();
   const importedEvents = [];
   const errors = [];
