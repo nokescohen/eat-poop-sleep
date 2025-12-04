@@ -1104,16 +1104,16 @@ function render(){
         // Use the same format as regular events: YYYY-MM-DD HH:MM
         const now = new Date();
         
-        // Format start time for prompt (YYYY-MM-DD HH:MM)
+        // Format start time for prompt (same format as regular events: YYYY-MM-DD HH:MM)
         const startDate = new Date(ev.startEvent.ts);
         const startYear = startDate.getFullYear();
         const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
         const startDay = String(startDate.getDate()).padStart(2, '0');
         const startHours = String(startDate.getHours()).padStart(2, '0');
         const startMinutes = String(startDate.getMinutes()).padStart(2, '0');
-        const startDateTimeLocal = `${startYear}-${startMonth}-${startDay} ${startHours}:${startMinutes}`;
+        const startDateTimeLocal = `${startYear}-${startMonth}-${startDay}T${startHours}:${startMinutes}`;
         
-        const startTimeStr = prompt('Edit start time (YYYY-MM-DD HH:MM):', startDateTimeLocal);
+        const startTimeStr = prompt('Edit start time (YYYY-MM-DD HH:MM):', startDateTimeLocal.replace('T', ' '));
         if(startTimeStr){
           // Parse the input - handle both "YYYY-MM-DD HH:MM" and "YYYY-MM-DDTHH:MM" formats
           const startDateTimeStr = startTimeStr.replace(' ', 'T');
@@ -1130,16 +1130,16 @@ function render(){
           save();
         }
         
-        // Format end time for prompt (YYYY-MM-DD HH:MM)
+        // Format end time for prompt (same format as regular events: YYYY-MM-DD HH:MM)
         const endDate = new Date(ev.endEvent.ts);
         const endYear = endDate.getFullYear();
         const endMonth = String(endDate.getMonth() + 1).padStart(2, '0');
         const endDay = String(endDate.getDate()).padStart(2, '0');
         const endHours = String(endDate.getHours()).padStart(2, '0');
         const endMinutes = String(endDate.getMinutes()).padStart(2, '0');
-        const endDateTimeLocal = `${endYear}-${endMonth}-${endDay} ${endHours}:${endMinutes}`;
+        const endDateTimeLocal = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
         
-        const endTimeStr = prompt('Edit end time (YYYY-MM-DD HH:MM):', endDateTimeLocal);
+        const endTimeStr = prompt('Edit end time (YYYY-MM-DD HH:MM):', endDateTimeLocal.replace('T', ' '));
         if(endTimeStr){
           // Parse the input - handle both "YYYY-MM-DD HH:MM" and "YYYY-MM-DDTHH:MM" formats
           const endDateTimeStr = endTimeStr.replace(' ', 'T');
