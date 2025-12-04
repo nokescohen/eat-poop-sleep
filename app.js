@@ -171,12 +171,43 @@ function calcSleepingFromEvents(){
   // Sort by timestamp, newest first
   sleepEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
   
-  // The first event in the sorted array is the most recent
+  // Check if there's an unpaired sleep_start (active sleep session)
+  // An unpaired sleep_start is one that doesn't have a sleep_end after it
+  let lastSleepStart = null;
+  let lastSleepEnd = null;
+  
+  for(const ev of sleepEvents){
+    if(ev.type === 'sleep_start' && !lastSleepStart){
+      lastSleepStart = ev;
+    }
+    if(ev.type === 'sleep_end' && !lastSleepEnd){
+      lastSleepEnd = ev;
+    }
+    // If we found both, we can determine the state
+    if(lastSleepStart && lastSleepEnd){
+      // If the most recent sleep_start is after the most recent sleep_end, we're sleeping
+      const result = new Date(lastSleepStart.ts) > new Date(lastSleepEnd.ts);
+      console.log('calcSleepingFromEvents: Last sleep_start:', lastSleepStart.ts, 'Last sleep_end:', lastSleepEnd.ts, '→ sleeping =', result);
+      return result;
+    }
+  }
+  
+  // If we only found a sleep_start (no sleep_end), we're sleeping
+  if(lastSleepStart && !lastSleepEnd){
+    console.log('calcSleepingFromEvents: Found sleep_start but no sleep_end → sleeping = true');
+    return true;
+  }
+  
+  // If we only found a sleep_end (no sleep_start), we're awake
+  if(lastSleepEnd && !lastSleepStart){
+    console.log('calcSleepingFromEvents: Found sleep_end but no sleep_start → sleeping = false');
+  return false;
+}
+
+  // Fallback: check the most recent event
   const mostRecent = sleepEvents[0];
   const result = mostRecent.type === 'sleep_start';
-  
-  console.log('calcSleepingFromEvents: Most recent sleep event:', mostRecent.type, 'at', mostRecent.ts, 'Total sleep events:', sleepEvents.length, '→ sleeping =', result);
-  
+  console.log('calcSleepingFromEvents: Fallback - most recent event:', mostRecent.type, 'at', mostRecent.ts, '→ sleeping =', result);
   return result;
 }
 
