@@ -160,7 +160,9 @@ function saveToLocalStorage(){
 
 // Determine sleeping state from most recent sleep event: if most recent sleep event is sleep_start -> sleeping = true
 function calcSleepingFromEvents(){
-  for(const ev of events){
+  // Sort events by timestamp, newest first, to find the most recent sleep event
+  const sorted = [...events].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  for(const ev of sorted){
     if(ev.type === 'sleep_start') return true;
     if(ev.type === 'sleep_end') return false;
   }
@@ -169,7 +171,9 @@ function calcSleepingFromEvents(){
 
 // Determine breastfeeding state from most recent breast event
 function calcBreastfeedingFromEvents(){
-  for(const ev of events){
+  // Sort events by timestamp, newest first, to find the most recent breast event
+  const sorted = [...events].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  for(const ev of sorted){
     if(ev.type === 'breast_start') return true;
     if(ev.type === 'breast_end') return false;
   }
@@ -655,11 +659,11 @@ function toggleSleep(){
 function toggleBreast(){
   if(!breastfeeding){
     addEvent('breast_start', {});
-    breastfeeding = true;
   }else{
     addEvent('breast_end', {});
-    breastfeeding = false;
   }
+  // Recalculate breastfeeding state from events to ensure accuracy
+  breastfeeding = calcBreastfeedingFromEvents();
   render();
 }
 
