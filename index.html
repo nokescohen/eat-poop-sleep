@@ -173,22 +173,21 @@
   </script>
   <!-- Bulk Import Modal -->
   <div id="bulk-import-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
-    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+    <div style="background: white; padding: 24px; border-radius: 12px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
       <h3 style="margin-top: 0;">Bulk Import Historical Events</h3>
-      <p style="font-size: 14px; color: #666; margin-bottom: 12px;">Enter events, one per line. Format: <strong>MM/DD/YYYY HH:MM EventType [Amount]</strong></p>
-      <div style="background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; font-family: monospace;">
-        <strong>Examples:</strong><br>
-        12/1/2025 10:00 Bottle 2oz<br>
-        12/1/2025 14:30 Poop<br>
-        12/2/2025 23:00 Antibiotic<br>
-        12/3/2025 08:00 Sleep start<br>
-        12/3/2025 10:00 Sleep end<br>
-        12/3/2025 11:00 Pump 3oz
+      <p style="font-size: 14px; color: #666; margin-bottom: 16px;">Add multiple events at once. Fill in the form below and click "Add Row" to add more entries.</p>
+      
+      <div id="bulk-import-rows" style="margin-bottom: 16px;">
+        <!-- Rows will be added here dynamically -->
       </div>
-      <textarea id="bulk-import-textarea" placeholder="Paste your events here, one per line..." style="width: 100%; height: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 13px; resize: vertical;"></textarea>
-      <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end;">
+      
+      <div style="margin-bottom: 16px;">
+        <button id="bulk-import-add-row" style="padding: 8px 16px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 6px; cursor: pointer;">+ Add Row</button>
+      </div>
+      
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button id="bulk-import-cancel" style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
-        <button id="bulk-import-submit" style="padding: 8px 16px; border: none; background: #0b84ff; color: white; border-radius: 6px; cursor: pointer;">Import</button>
+        <button id="bulk-import-submit" style="padding: 8px 16px; border: none; background: #0b84ff; color: white; border-radius: 6px; cursor: pointer;">Import All</button>
       </div>
     </div>
   </div>

@@ -1332,23 +1332,28 @@ elements.btnUndo.addEventListener('click', () => {
 });
 
 // Bulk import historical events
-async function bulkImportEvents(){
+function bulkImportEvents(){
   console.log('bulkImportEvents called');
   const modal = document.getElementById('bulk-import-modal');
-  const textarea = document.getElementById('bulk-import-textarea');
+  const rowsContainer = document.getElementById('bulk-import-rows');
+  const addRowBtn = document.getElementById('bulk-import-add-row');
   const cancelBtn = document.getElementById('bulk-import-cancel');
   const submitBtn = document.getElementById('bulk-import-submit');
   
-  if(!modal || !textarea || !cancelBtn || !submitBtn){
-    console.error('Modal elements not found:', {modal, textarea, cancelBtn, submitBtn});
+  if(!modal || !rowsContainer || !addRowBtn || !cancelBtn || !submitBtn){
+    console.error('Modal elements not found:', {modal, rowsContainer, addRowBtn, cancelBtn, submitBtn});
     alert('Error: Bulk import modal elements not found. Please refresh the page.');
     return;
   }
   
+  // Clear existing rows
+  rowsContainer.innerHTML = '';
+  
+  // Add first row
+  addBulkImportRow(rowsContainer);
+  
   // Show modal
   modal.style.display = 'flex';
-  textarea.value = '';
-  textarea.focus();
   
   // Close modal function
   const closeModal = () => {
@@ -1358,22 +1363,108 @@ async function bulkImportEvents(){
   // Cancel button
   cancelBtn.onclick = closeModal;
   
+  // Add row button
+  addRowBtn.onclick = () => {
+    addBulkImportRow(rowsContainer);
+  };
+  
   // Submit button
   submitBtn.onclick = async () => {
-    const input = textarea.value.trim();
-    if(!input){
-      alert('Please enter at least one event.');
-      return;
-    }
-    
-    await processBulkImport(input);
+    await processBulkImportFromForm(rowsContainer);
     closeModal();
   };
   
-  // Close on escape key
+  // Close on background click
   modal.onclick = (e) => {
     if(e.target === modal) closeModal();
   };
+}
+
+// Add a new row to the bulk import form
+function addBulkImportRow(container){
+  const row = document.createElement('div');
+  row.className = 'bulk-import-row';
+  row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 12px; align-items: center; padding: 8px; background: #f9f9f9; border-radius: 6px;';
+  
+  const rowId = Date.now() + Math.random().toString(36).slice(2, 6);
+  
+  // Date input
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.className = 'bulk-import-date';
+  dateInput.style.cssText = 'flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+  const today = new Date();
+  dateInput.value = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  
+  // Time input
+  const timeInput = document.createElement('input');
+  timeInput.type = 'time';
+  timeInput.className = 'bulk-import-time';
+  timeInput.style.cssText = 'flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+  const now = new Date();
+  timeInput.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  
+  // Action dropdown
+  const actionSelect = document.createElement('select');
+  actionSelect.className = 'bulk-import-action';
+  actionSelect.style.cssText = 'flex: 2; padding: 8px; border: 1px solid #ddd; border-radius: 4px;';
+  actionSelect.innerHTML = `
+    <option value="">Select action...</option>
+    <optgroup label="Baby Stats">
+      <option value="sleep_start">Sleep - Start</option>
+      <option value="sleep_end">Sleep - End</option>
+      <option value="breast_start">Breastfeed - Start</option>
+      <option value="breast_end">Breastfeed - End</option>
+      <option value="feed">Bottle Feed</option>
+      <option value="poop">Poop</option>
+      <option value="pee">Pee</option>
+      <option value="antibiotic">Antibiotic</option>
+      <option value="wound_clean">Wound Clean</option>
+      <option value="vit_d">Vit D Drop</option>
+    </optgroup>
+    <optgroup label="Mama Stats">
+      <option value="pump">Pump</option>
+      <option value="freeze">Freeze</option>
+      <option value="h2o">H2O</option>
+    </optgroup>
+  `;
+  
+  // Amount input (shown conditionally)
+  const amountInput = document.createElement('input');
+  amountInput.type = 'number';
+  amountInput.step = '0.5';
+  amountInput.min = '0';
+  amountInput.placeholder = 'Amount (oz)';
+  amountInput.className = 'bulk-import-amount';
+  amountInput.style.cssText = 'flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; display: none;';
+  
+  // Show/hide amount input based on action
+  actionSelect.addEventListener('change', () => {
+    const needsAmount = ['feed', 'pump', 'freeze', 'h2o'].includes(actionSelect.value);
+    amountInput.style.display = needsAmount ? 'block' : 'none';
+    if(needsAmount && !amountInput.value){
+      // Set default amounts
+      if(actionSelect.value === 'feed' || actionSelect.value === 'pump') amountInput.value = '0.5';
+      else if(actionSelect.value === 'freeze') amountInput.value = '1';
+      else if(actionSelect.value === 'h2o') amountInput.value = '40';
+    }
+  });
+  
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = '×';
+  deleteBtn.style.cssText = 'width: 32px; height: 32px; padding: 0; border: 1px solid #ddd; background: #ff6b6b; color: white; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1;';
+  deleteBtn.onclick = () => {
+    row.remove();
+  };
+  
+  row.appendChild(dateInput);
+  row.appendChild(timeInput);
+  row.appendChild(actionSelect);
+  row.appendChild(amountInput);
+  row.appendChild(deleteBtn);
+  
+  container.appendChild(row);
 }
 
 async function processBulkImport(input){
