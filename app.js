@@ -1634,12 +1634,13 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
       }
     }
     
-    // Calculate average wake window for each period
+    // Calculate average wake window for each period (in minutes)
     for (const period of periods) {
       const wakeWindows = wakeWindowsByPeriod.get(period.key) || [];
       if (wakeWindows.length > 0) {
-        const avgWakeWindow = wakeWindows.reduce((sum, w) => sum + w, 0) / wakeWindows.length;
-        dataMap.set(period.key, avgWakeWindow);
+        const avgWakeWindowHours = wakeWindows.reduce((sum, w) => sum + w, 0) / wakeWindows.length;
+        const avgWakeWindowMinutes = Math.round(avgWakeWindowHours * 60);
+        dataMap.set(period.key, avgWakeWindowMinutes);
       } else {
         dataMap.set(period.key, 0);
       }
