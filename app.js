@@ -160,12 +160,20 @@ function saveToLocalStorage(){
 
 // Determine sleeping state from most recent sleep event: if most recent sleep event is sleep_start -> sleeping = true
 function calcSleepingFromEvents(){
+  if(events.length === 0) return false;
+  
   // Sort events by timestamp, newest first, to find the most recent sleep event
   const sorted = [...events].sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  
+  // Find the most recent sleep-related event (either sleep_start or sleep_end)
   for(const ev of sorted){
-    if(ev.type === 'sleep_start') return true;
-    if(ev.type === 'sleep_end') return false;
+    if(ev.type === 'sleep_start' || ev.type === 'sleep_end'){
+      console.log('Most recent sleep event:', ev.type, 'at', ev.ts);
+      return ev.type === 'sleep_start';
+    }
   }
+  
+  // No sleep events found
   return false;
 }
 
@@ -646,15 +654,21 @@ function setupDailyEmailCheck(){
 }
 
 function toggleSleep(){
+  console.log('toggleSleep called, current sleeping state:', sleeping);
+  console.log('Events before toggle:', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})));
+  
   if(!sleeping){
     addEvent('sleep_start', {});
   }else{
     addEvent('sleep_end', {});
   }
+  
   // Recalculate sleeping state from events to ensure accuracy
   // This is important because addEvent() calls save() which may trigger
   // Firebase real-time updates, and we want the state to be correct
   sleeping = calcSleepingFromEvents();
+  console.log('Events after toggle:', events.filter(e => e.type === 'sleep_start' || e.type === 'sleep_end').map(e => ({type: e.type, ts: e.ts})));
+  console.log('New sleeping state:', sleeping);
   render();
 }
 
