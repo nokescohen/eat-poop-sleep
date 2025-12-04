@@ -1333,10 +1333,17 @@ elements.btnUndo.addEventListener('click', () => {
 
 // Bulk import historical events
 async function bulkImportEvents(){
+  console.log('bulkImportEvents called');
   const modal = document.getElementById('bulk-import-modal');
   const textarea = document.getElementById('bulk-import-textarea');
   const cancelBtn = document.getElementById('bulk-import-cancel');
   const submitBtn = document.getElementById('bulk-import-submit');
+  
+  if(!modal || !textarea || !cancelBtn || !submitBtn){
+    console.error('Modal elements not found:', {modal, textarea, cancelBtn, submitBtn});
+    alert('Error: Bulk import modal elements not found. Please refresh the page.');
+    return;
+  }
   
   // Show modal
   modal.style.display = 'flex';
