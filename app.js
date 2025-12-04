@@ -737,6 +737,11 @@ function editQuantity(ev){
 }
 
 function render(){
+  // Recalculate sleeping and breastfeeding state from events before rendering
+  // This ensures the state is always accurate, even if events were updated externally
+  sleeping = calcSleepingFromEvents();
+  breastfeeding = calcBreastfeedingFromEvents();
+  
   // sleep status
   elements.sleepStatus.textContent = sleeping ? 'Sleeping' : 'Awake';
   // update sleep button text
