@@ -164,14 +164,22 @@ function saveToLocalStorage(){
 function calcSleepingFromEvents(){
   if(events.length === 0) return false;
   
-  // Get all sleep events and sort by timestamp, newest first
-  const sleepEvents = events.filter(ev => ev.type === 'sleep_start' || ev.type === 'sleep_end');
+  const now = new Date();
+  
+  // Get all sleep events and filter out future-dated events (they shouldn't exist, but just in case)
+  const sleepEvents = events.filter(ev => {
+    if(ev.type !== 'sleep_start' && ev.type !== 'sleep_end') return false;
+    const evTime = new Date(ev.ts);
+    // Only include events that are not in the future
+    return evTime <= now;
+  });
+  
   if(sleepEvents.length === 0) return false;
   
   // Sort by timestamp, newest first
   sleepEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
   
-  // Find the most recent sleep_start and most recent sleep_end
+  // Find the most recent sleep_start and most recent sleep_end (from valid, non-future events)
   let mostRecentStart = null;
   let mostRecentEnd = null;
   
@@ -203,9 +211,9 @@ function calcSleepingFromEvents(){
   // If we only found a sleep_end (no sleep_start), we're awake
   if(mostRecentEnd && !mostRecentStart){
     console.log('calcSleepingFromEvents: Found sleep_end but no sleep_start → sleeping = false');
-  return false;
-}
-
+    return false;
+  }
+  
   // Fallback: should never reach here, but just in case
   return false;
 }
