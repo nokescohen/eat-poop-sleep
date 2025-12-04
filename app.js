@@ -171,44 +171,43 @@ function calcSleepingFromEvents(){
   // Sort by timestamp, newest first
   sleepEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
   
-  // Check if there's an unpaired sleep_start (active sleep session)
-  // An unpaired sleep_start is one that doesn't have a sleep_end after it
-  let lastSleepStart = null;
-  let lastSleepEnd = null;
+  // Find the most recent sleep_start and most recent sleep_end
+  let mostRecentStart = null;
+  let mostRecentEnd = null;
   
   for(const ev of sleepEvents){
-    if(ev.type === 'sleep_start' && !lastSleepStart){
-      lastSleepStart = ev;
+    if(ev.type === 'sleep_start' && !mostRecentStart){
+      mostRecentStart = ev;
     }
-    if(ev.type === 'sleep_end' && !lastSleepEnd){
-      lastSleepEnd = ev;
+    if(ev.type === 'sleep_end' && !mostRecentEnd){
+      mostRecentEnd = ev;
     }
-    // If we found both, we can determine the state
-    if(lastSleepStart && lastSleepEnd){
-      // If the most recent sleep_start is after the most recent sleep_end, we're sleeping
-      const result = new Date(lastSleepStart.ts) > new Date(lastSleepEnd.ts);
-      console.log('calcSleepingFromEvents: Last sleep_start:', lastSleepStart.ts, 'Last sleep_end:', lastSleepEnd.ts, '→ sleeping =', result);
-      return result;
-    }
+    // Once we have both, we can stop searching
+    if(mostRecentStart && mostRecentEnd) break;
+  }
+  
+  // Determine state based on which is more recent
+  if(mostRecentStart && mostRecentEnd){
+    // If the most recent sleep_start is after the most recent sleep_end, we're sleeping
+    const result = new Date(mostRecentStart.ts) > new Date(mostRecentEnd.ts);
+    console.log('calcSleepingFromEvents: Most recent sleep_start:', mostRecentStart.ts, 'Most recent sleep_end:', mostRecentEnd.ts, '→ sleeping =', result);
+    return result;
   }
   
   // If we only found a sleep_start (no sleep_end), we're sleeping
-  if(lastSleepStart && !lastSleepEnd){
+  if(mostRecentStart && !mostRecentEnd){
     console.log('calcSleepingFromEvents: Found sleep_start but no sleep_end → sleeping = true');
     return true;
   }
   
   // If we only found a sleep_end (no sleep_start), we're awake
-  if(lastSleepEnd && !lastSleepStart){
+  if(mostRecentEnd && !mostRecentStart){
     console.log('calcSleepingFromEvents: Found sleep_end but no sleep_start → sleeping = false');
   return false;
 }
 
-  // Fallback: check the most recent event
-  const mostRecent = sleepEvents[0];
-  const result = mostRecent.type === 'sleep_start';
-  console.log('calcSleepingFromEvents: Fallback - most recent event:', mostRecent.type, 'at', mostRecent.ts, '→ sleeping =', result);
-  return result;
+  // Fallback: should never reach here, but just in case
+  return false;
 }
 
 // Determine breastfeeding state from most recent breast event
@@ -274,7 +273,17 @@ function addEvent(type, data = {}){
   }
   
   // Otherwise create a new event
-  const ev = { id: Date.now().toString() + Math.random().toString(36).slice(2,6), type, ts: nowISO(), data };
+  // Ensure timestamp is not in the future (use current time)
+  const now = new Date();
+  const ev = { id: Date.now().toString() + Math.random().toString(36).slice(2,6), type, ts: now.toISOString(), data };
+  
+  // Double-check: ensure timestamp is not in the future
+  const eventTime = new Date(ev.ts);
+  if(eventTime > now){
+    console.warn('Event timestamp was in the future, correcting to current time');
+    ev.ts = now.toISOString();
+  }
+  
   events.unshift(ev); // newest first
   save();
 }
@@ -742,6 +751,13 @@ function editTimestamp(ev){
     return;
   }
   
+  // Prevent future timestamps - only allow current or past times
+  const now = new Date();
+  if(newDate > now){
+    alert('Cannot set event time in the future. Please use current or past time.');
+    return;
+  }
+  
   // Update the event timestamp
   ev.ts = newDate.toISOString();
   
@@ -1016,21 +1032,34 @@ function render(){
       meta.title = 'Click to edit times';
       meta.onclick = () => {
         // When editing a session, allow editing both start and end times
+        const now = new Date();
         const startTimeStr = prompt('Edit start time (format: YYYY-MM-DDTHH:mm):', new Date(ev.startEvent.ts).toISOString().slice(0, 16));
         if(startTimeStr){
           const newStartDate = new Date(startTimeStr);
-          if(!isNaN(newStartDate.getTime())){
-            ev.startEvent.ts = newStartDate.toISOString();
-            save();
+          if(isNaN(newStartDate.getTime())){
+            alert('Invalid date/time format.');
+            return;
           }
+          if(newStartDate > now){
+            alert('Cannot set start time in the future. Please use current or past time.');
+            return;
+          }
+          ev.startEvent.ts = newStartDate.toISOString();
+          save();
         }
         const endTimeStr = prompt('Edit end time (format: YYYY-MM-DDTHH:mm):', new Date(ev.endEvent.ts).toISOString().slice(0, 16));
         if(endTimeStr){
           const newEndDate = new Date(endTimeStr);
-          if(!isNaN(newEndDate.getTime())){
-            ev.endEvent.ts = newEndDate.toISOString();
-            save();
+          if(isNaN(newEndDate.getTime())){
+            alert('Invalid date/time format.');
+            return;
           }
+          if(newEndDate > now){
+            alert('Cannot set end time in the future. Please use current or past time.');
+            return;
+          }
+          ev.endEvent.ts = newEndDate.toISOString();
+          save();
         }
       };
       
