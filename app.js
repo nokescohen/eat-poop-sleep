@@ -1333,21 +1333,43 @@ elements.btnUndo.addEventListener('click', () => {
 
 // Bulk import historical events
 async function bulkImportEvents(){
-  const instructions = `Enter events, one per line. Format:
-MM/DD/YYYY HH:MM EventType [Amount]
+  const modal = document.getElementById('bulk-import-modal');
+  const textarea = document.getElementById('bulk-import-textarea');
+  const cancelBtn = document.getElementById('bulk-import-cancel');
+  const submitBtn = document.getElementById('bulk-import-submit');
+  
+  // Show modal
+  modal.style.display = 'flex';
+  textarea.value = '';
+  textarea.focus();
+  
+  // Close modal function
+  const closeModal = () => {
+    modal.style.display = 'none';
+  };
+  
+  // Cancel button
+  cancelBtn.onclick = closeModal;
+  
+  // Submit button
+  submitBtn.onclick = async () => {
+    const input = textarea.value.trim();
+    if(!input){
+      alert('Please enter at least one event.');
+      return;
+    }
+    
+    await processBulkImport(input);
+    closeModal();
+  };
+  
+  // Close on escape key
+  modal.onclick = (e) => {
+    if(e.target === modal) closeModal();
+  };
+}
 
-Examples:
-12/1/2025 10:00 Bottle 2oz
-12/1/2025 14:30 Poop
-12/2/2025 23:00 Antibiotic
-12/3/2025 08:00 Sleep start
-12/3/2025 10:00 Sleep end
-12/3/2025 11:00 Pump 3oz
-
-Event types: Sleep, Sleep start, Sleep end, Breastfeed, Breastfeed start, Breastfeed end, Bottle, Bottle Feed, Poop, Pee, Antibiotic, Wound Clean, Vit D, Pump, Freeze, H2O`;
-
-  const input = prompt(instructions + '\n\nPaste your events below:', '');
-  if(!input || input.trim() === '') return;
+async function processBulkImport(input){
   
   const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const now = new Date();
