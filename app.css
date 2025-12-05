@@ -93,15 +93,35 @@ h1{margin:0 0 12px;font-size:20px}
 .controls button{
   flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef;background:white;
 }
+.filter-container{
+  display:flex;
+  gap:12px;
+  align-items:stretch;
+  margin-bottom:12px;
+}
 .date-picker{
-  width:100%;
+  flex:1;
   padding:10px;
   border-radius:8px;
   border:1px solid #e6e9ef;
   background:white;
   font-size:14px;
-  margin-bottom:12px;
   font-family:inherit;
+  height:auto;
+  min-height:40px;
+}
+.category-filter{
+  flex:0 0 auto;
+  min-width:120px;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #e6e9ef;
+  background:white;
+  font-size:14px;
+  font-family:inherit;
+  cursor:pointer;
+  height:auto;
+  min-height:40px;
 }
 
 .history{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
