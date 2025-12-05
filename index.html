@@ -61,7 +61,14 @@
 
     <section>
       <h2>Daily Log</h2>
-      <input type="date" id="date-picker" class="date-picker" />
+      <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+        <input type="date" id="date-picker" class="date-picker" />
+        <select id="category-filter" class="category-filter" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; cursor: pointer;">
+          <option value="all">All</option>
+          <option value="baby">Baby</option>
+          <option value="mama">Mama</option>
+        </select>
+      </div>
       <ul id="history" class="history"></ul>
     </section>
 
