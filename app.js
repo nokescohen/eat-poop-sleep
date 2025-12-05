@@ -983,7 +983,7 @@ function render(){
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
 
-  // Daily Log - show only events from selected date and category
+  // Daily Log - show only events from selected date, category, and activity
   elements.history.innerHTML = '';
   console.log('Total events:', events.length);
   
@@ -993,21 +993,43 @@ function render(){
     return babyTypes.includes(ev.type);
   };
   
+  // Helper function to get the activity type for an event
+  const getActivityType = (ev) => {
+    if(ev.type === 'sleep_session' || ev.type === 'sleep_start' || ev.type === 'sleep_end') return 'sleep';
+    if(ev.type === 'breast_session' || ev.type === 'breast_start' || ev.type === 'breast_end') return 'breastfeed';
+    if(ev.type === 'feed') return 'bottle_feed';
+    if(ev.type === 'poop') return 'poop';
+    if(ev.type === 'pee') return 'pee';
+    if(ev.type === 'pump') return 'pump';
+    if(ev.type === 'freeze') return 'freeze';
+    if(ev.type === 'h2o') return 'h2o';
+    if(ev.type === 'antibiotic') return 'antibiotic';
+    if(ev.type === 'wound_clean') return 'wound_clean';
+    if(ev.type === 'vit_d') return 'vit_d';
+    return ev.type;
+  };
+  
   const allLogEvents = events.filter(ev => {
     const evDate = new Date(ev.ts);
     const dateMatch = evDate >= dateStart && evDate <= dateEnd;
     
     // Apply category filter
+    let categoryMatch = true;
     if(selectedCategory === 'baby'){
-      return dateMatch && isBabyEvent(ev);
+      categoryMatch = isBabyEvent(ev);
     } else if(selectedCategory === 'mama'){
-      return dateMatch && !isBabyEvent(ev);
-    } else {
-      // 'all' - show everything
-      return dateMatch;
+      categoryMatch = !isBabyEvent(ev);
     }
+    
+    // Apply activity filter
+    let activityMatch = true;
+    if(selectedActivity !== 'all'){
+      activityMatch = getActivityType(ev) === selectedActivity;
+    }
+    
+    return dateMatch && categoryMatch && activityMatch;
   }).sort((a, b) => new Date(a.ts) - new Date(b.ts)); // Sort chronologically for pairing
-  console.log('Filtered events for selected date and category:', allLogEvents.length);
+  console.log('Filtered events for selected date, category, and activity:', allLogEvents.length);
   
   // Pair up sleep and breast sessions
   const processedEvents = [];
