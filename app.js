@@ -21,6 +21,7 @@ const elements = {
   sleepStatus: document.getElementById('sleep-status'),
   datePicker: document.getElementById('date-picker'),
   categoryFilter: document.getElementById('category-filter'),
+  activityFilter: document.getElementById('activity-filter'),
   btnUndo: document.getElementById('btn-undo'),
   btnBulkImport: document.getElementById('btn-bulk-import'),
   btnExport: document.getElementById('btn-export'),
@@ -43,6 +44,7 @@ let firestoreReady = false;
 let unsubscribeFirestore = null;
 let selectedDate = new Date(); // Default to today
 let selectedCategory = 'all'; // Default to 'all' (Baby/Mama/All filter)
+let selectedActivity = 'all'; // Default to 'all' (Activity type filter)
 let trendChartInstanceBaby = null; // Chart.js instance for Baby
 let trendChartInstanceMama = null; // Chart.js instance for Mama
 
@@ -2170,6 +2172,55 @@ elements.datePicker.addEventListener('change', (e) => {
 if(elements.categoryFilter){
   elements.categoryFilter.addEventListener('change', (e) => {
     selectedCategory = e.target.value;
+    updateActivityFilterOptions();
+    selectedActivity = 'all'; // Reset activity filter when category changes
+    if(elements.activityFilter) elements.activityFilter.value = 'all';
+    render();
+  });
+}
+
+// Activity filter options based on category
+function updateActivityFilterOptions(){
+  if(!elements.activityFilter) return;
+  
+  const currentValue = elements.activityFilter.value;
+  elements.activityFilter.innerHTML = '<option value="all">All Activities</option>';
+  
+  if(selectedCategory === 'baby' || selectedCategory === 'all'){
+    elements.activityFilter.innerHTML += `
+      <option value="sleep">Sleep</option>
+      <option value="breastfeed">Breastfeed</option>
+      <option value="bottle_feed">Bottle Feed</option>
+      <option value="poop">Poop</option>
+      <option value="pee">Pee</option>
+      <option value="antibiotic">Antibiotic</option>
+      <option value="wound_clean">Wound Clean</option>
+      <option value="vit_d">Vit D Drop</option>
+    `;
+  }
+  
+  if(selectedCategory === 'mama' || selectedCategory === 'all'){
+    elements.activityFilter.innerHTML += `
+      <option value="pump">Pump</option>
+      <option value="freeze">Freeze</option>
+      <option value="h2o">H2O</option>
+    `;
+  }
+  
+  // Try to restore previous selection if it still exists
+  if(currentValue !== 'all' && Array.from(elements.activityFilter.options).some(opt => opt.value === currentValue)){
+    elements.activityFilter.value = currentValue;
+    selectedActivity = currentValue;
+  } else {
+    elements.activityFilter.value = 'all';
+    selectedActivity = 'all';
+  }
+}
+
+// Activity filter event listener
+if(elements.activityFilter){
+  elements.activityFilter.addEventListener('change', (e) => {
+    selectedActivity = e.target.value;
     render();
   });
 }
@@ -2183,6 +2234,8 @@ initFirebase().then(() => {
   const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   elements.datePicker.value = todayStr;
   selectedDate = new Date();
+  // Initialize activity filter options
+  updateActivityFilterOptions();
   render();
   // Initialize charts after render
   setTimeout(() => {
