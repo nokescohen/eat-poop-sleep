@@ -44,6 +44,7 @@ let sleeping = false;
 let breastfeeding = false;
 let firestoreReady = false;
 let unsubscribeFirestore = null;
+let lastSavedEventIds = new Set(); // Track which events have been saved to Firebase
 let selectedDate = new Date(); // Default to today
 let selectedCategory = 'all'; // Default to 'all' (Baby/Mama/All filter)
 let selectedActivity = 'all'; // Default to 'all' (Activity type filter)
@@ -100,8 +101,11 @@ async function initFirebase(){
       (snapshot) => {
         console.log('Firebase snapshot received, document count:', snapshot.size);
         events = [];
+        lastSavedEventIds.clear();
         snapshot.forEach((doc) => {
-          events.push({ id: doc.id, ...doc.data() });
+          const event = { id: doc.id, ...doc.data() };
+          events.push(event);
+          lastSavedEventIds.add(event.id); // Mark as already saved
         });
         // Ensure events are sorted by timestamp (newest first) after loading from Firebase
         events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
@@ -250,10 +254,18 @@ async function save(){
       const { collection, doc, setDoc, getDoc } = window.firestoreFunctions;
       const eventsRef = collection(window.db, EVENTS_COLLECTION);
       
-      console.log('Saving', events.length, 'events to Firebase...');
+      // Only save events that haven't been saved yet (new or modified)
+      const eventsToSave = events.filter(ev => !lastSavedEventIds.has(ev.id));
       
-      // Save all events to Firestore
-      const savePromises = events.map(ev => {
+      if(eventsToSave.length === 0){
+        console.log('No new events to save');
+        return;
+      }
+      
+      console.log('Saving', eventsToSave.length, 'new/modified events to Firebase (out of', events.length, 'total)...');
+      
+      // Save only new/modified events to Firestore
+      const savePromises = eventsToSave.map(ev => {
         const eventDoc = doc(eventsRef, ev.id);
         const eventData = {
           type: ev.type,
@@ -264,17 +276,20 @@ async function save(){
       });
       
       await Promise.all(savePromises);
-      console.log('Successfully saved', events.length, 'events to Firebase');
+      console.log('Successfully saved', eventsToSave.length, 'events to Firebase');
       
-      // Verify the save by reading back the most recent event
-      if(events.length > 0){
-        const mostRecentEvent = events[0];
-        const eventDoc = doc(eventsRef, mostRecentEvent.id);
+      // Mark these events as saved
+      eventsToSave.forEach(ev => lastSavedEventIds.add(ev.id));
+      
+      // Verify the save by reading back the most recent new event
+      if(eventsToSave.length > 0){
+        const mostRecentNewEvent = eventsToSave[0];
+        const eventDoc = doc(eventsRef, mostRecentNewEvent.id);
         const docSnap = await getDoc(eventDoc);
         if(docSnap.exists()){
-          console.log('Verification: Most recent event confirmed in Firebase:', mostRecentEvent.id);
+          console.log('Verification: Most recent new event confirmed in Firebase:', mostRecentNewEvent.id);
         } else {
-          console.error('WARNING: Most recent event NOT found in Firebase after save!', mostRecentEvent.id);
+          console.error('WARNING: Most recent new event NOT found in Firebase after save!', mostRecentNewEvent.id);
         }
       }
       
@@ -284,7 +299,14 @@ async function save(){
     } catch(error){
       console.error('Firestore save error:', error);
       console.error('Error code:', error.code, 'Error message:', error.message);
-      alert('Error saving to Firebase: ' + error.message + '\n\nData saved locally. Please check your connection.');
+      
+      // If it's a quota error, show a helpful message
+      if(error.code === 'resource-exhausted'){
+        alert('Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.');
+      } else {
+        alert('Error saving to Firebase: ' + error.message + '\n\nData saved locally. Please check your connection.');
+      }
+      
       // Fallback to localStorage
       saveToLocalStorage();
       render();
