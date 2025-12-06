@@ -28,6 +28,7 @@ const elements = {
   btnExportSummary: document.getElementById('btn-export-summary'),
   btnClearCache: document.getElementById('btn-clear-cache'),
   btnRefreshSync: document.getElementById('btn-refresh-sync'),
+  btnRefreshSync: document.getElementById('btn-refresh-sync'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
