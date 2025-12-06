@@ -1701,6 +1701,78 @@ if(elements.btnRefreshSync){
   });
 }
 
+// Debug Firebase button - check what's actually in Firebase
+if(elements.btnDebugFirebase){
+  elements.btnDebugFirebase.addEventListener('click', async () => {
+    if(!isFirebaseAvailable()){
+      alert('Firebase is not available.');
+      return;
+    }
+    
+    try {
+      const { collection, getDocs, query, orderBy } = window.firestoreFunctions;
+      const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      const q = query(eventsRef, orderBy('ts', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      const firebaseEvents = [];
+      snapshot.forEach((doc) => {
+        firebaseEvents.push({ id: doc.id, ...doc.data() });
+      });
+      
+      // Sort by timestamp
+      firebaseEvents.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+      
+      // Find events after 13:56 today
+      const today = new Date();
+      today.setHours(13, 56, 0, 0);
+      const eventsAfter1356 = firebaseEvents.filter(ev => new Date(ev.ts) > today);
+      
+      // Create debug report
+      let report = `=== Firebase Debug Report ===\n\n`;
+      report += `Total events in Firebase: ${firebaseEvents.length}\n`;
+      report += `Events in local memory: ${events.length}\n`;
+      report += `Events after 13:56 today: ${eventsAfter1356.length}\n\n`;
+      
+      if(eventsAfter1356.length > 0){
+        report += `Events after 13:56 today:\n`;
+        eventsAfter1356.slice(0, 20).forEach(ev => {
+          const date = new Date(ev.ts);
+          report += `- ${date.toLocaleString()} | ${ev.type} | ID: ${ev.id}\n`;
+        });
+        if(eventsAfter1356.length > 20){
+          report += `... and ${eventsAfter1356.length - 20} more\n`;
+        }
+      } else {
+        report += `No events found after 13:56 today in Firebase.\n`;
+      }
+      
+      report += `\n=== Most Recent 10 Events in Firebase ===\n`;
+      firebaseEvents.slice(0, 10).forEach(ev => {
+        const date = new Date(ev.ts);
+        report += `${date.toLocaleString()} | ${ev.type} | ID: ${ev.id}\n`;
+      });
+      
+      report += `\n=== Most Recent 10 Events in Local Memory ===\n`;
+      events.slice(0, 10).forEach(ev => {
+        const date = new Date(ev.ts);
+        report += `${date.toLocaleString()} | ${ev.type} | ID: ${ev.id}\n`;
+      });
+      
+      console.log(report);
+      alert(report);
+      
+      // Also log to console for easier inspection
+      console.log('All Firebase events:', firebaseEvents);
+      console.log('Events after 13:56:', eventsAfter1356);
+      
+    } catch(error) {
+      console.error('Error debugging Firebase:', error);
+      alert('Error: ' + error.message);
+    }
+  });
+}
+
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
