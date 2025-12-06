@@ -161,7 +161,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     
     // Firebase configuration - REPLACE WITH YOUR OWN CONFIG
     const firebaseConfig = {
@@ -176,7 +176,7 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     window.db = getFirestore(app);
-    window.firestoreFunctions = { collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+    window.firestoreFunctions = { collection, doc, setDoc, getDocs, getDoc, deleteDoc, onSnapshot, query, orderBy };
     
     // Load app.js after Firebase is ready
     const script = document.createElement('script');

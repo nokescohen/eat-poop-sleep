@@ -277,7 +277,7 @@ async function save(){
   }
 }
 
-function addEvent(type, data = {}){
+async function addEvent(type, data = {}){
   // Check if there's a recent event of the same type within 1 minute
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
   const recentSameType = events.find(ev => {
@@ -291,7 +291,7 @@ function addEvent(type, data = {}){
     const currentAmount = Number(recentSameType.data.amount) || 0;
     const newAmount = Number(data.amount) || 0;
     recentSameType.data.amount = currentAmount + newAmount;
-    save();
+    await save();
     return;
   }
   
@@ -308,7 +308,9 @@ function addEvent(type, data = {}){
   }
   
   events.unshift(ev); // newest first
-  save();
+  console.log('New event added:', ev.id, ev.type, ev.ts);
+  await save();
+  console.log('Event saved to Firebase:', ev.id);
 }
 
 async function undoLast(){
