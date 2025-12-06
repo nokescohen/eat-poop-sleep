@@ -286,66 +286,158 @@ async function save(){
       const failed = results.filter(r => !r.success);
       
       if (failed.length > 0) {
+        console.error('=== SAVE FAILURE DETECTED ===');
         console.error('Failed to save', failed.length, 'out of', eventsToSave.length, 'events');
-        // Check if any failures are quota errors
-        const quotaError = failed.find(r => 
-          r.error && (
-            r.error.code === 'resource-exhausted' || 
-            r.error.message?.includes('quota') ||
-            r.error.message?.includes('Quota exceeded')
-          )
-        );
+        console.error('Failed events:', failed);
         
+        // Log each failed error in detail
+        failed.forEach((f, idx) => {
+          console.error(`Failed event ${idx + 1}:`, {
+            eventId: f.event?.id,
+            eventType: f.event?.type,
+            error: f.error,
+            errorCode: f.error?.code,
+            errorMessage: f.error?.message,
+            errorString: String(f.error),
+            errorKeys: f.error ? Object.keys(f.error) : []
+          });
+        });
+        
+        // Check if any failures are quota errors - check more thoroughly
+        const quotaError = failed.find(r => {
+          if (!r.error) return false;
+          const err = r.error;
+          const errStr = String(err).toLowerCase();
+          const msgStr = (err.message || '').toLowerCase();
+          const codeStr = (err.code || '').toLowerCase();
+          
+          return (
+            err.code === 'resource-exhausted' || 
+            codeStr.includes('resource-exhausted') ||
+            codeStr.includes('quota') ||
+            err.message?.includes('quota') ||
+            err.message?.includes('Quota exceeded') ||
+            msgStr.includes('quota') ||
+            msgStr.includes('exceeded') ||
+            errStr.includes('quota') ||
+            errStr.includes('exceeded')
+          );
+        });
+        
+        console.error('Quota error found?', !!quotaError);
         if (quotaError) {
-          throw new Error('Firebase quota exceeded');
+          console.error('THROWING QUOTA ERROR');
+          const quotaErr = new Error('Firebase quota exceeded');
+          quotaErr.code = 'resource-exhausted';
+          quotaErr.originalError = quotaError.error;
+          throw quotaErr;
         } else {
+          console.error('THROWING FIRST ERROR');
           // Throw the first error to trigger the catch block
-          throw failed[0].error || new Error('Failed to save some events');
+          const firstErr = failed[0].error || new Error('Failed to save some events');
+          console.error('First error details:', firstErr);
+          throw firstErr;
         }
       }
       
       console.log('Successfully saved', successful.length, 'events to Firebase');
       
-      // Mark only successfully saved events as saved
-      successful.forEach(r => lastSavedEventIds.add(r.event.id));
-      
-      // Verify the save by reading back the most recent new event
-      if(eventsToSave.length > 0){
-        const mostRecentNewEvent = eventsToSave[0];
-        const eventDoc = doc(eventsRef, mostRecentNewEvent.id);
-        const docSnap = await getDoc(eventDoc);
-        if(docSnap.exists()){
-          console.log('Verification: Most recent new event confirmed in Firebase:', mostRecentNewEvent.id);
+      // Verify ALL saved events actually exist in Firebase (to catch silent quota failures)
+      if(successful.length > 0){
+        console.log('Verifying all saved events exist in Firebase...');
+        const verificationPromises = successful.map(async (r) => {
+          try {
+            const eventDoc = doc(eventsRef, r.event.id);
+            const docSnap = await getDoc(eventDoc);
+            return { event: r.event, exists: docSnap.exists() };
+          } catch (err) {
+            console.error('Verification error for event:', r.event.id, err);
+            return { event: r.event, exists: false, error: err };
+          }
+        });
+        
+        const verificationResults = await Promise.all(verificationPromises);
+        const missing = verificationResults.filter(r => !r.exists);
+        
+        if (missing.length > 0) {
+          console.error('=== VERIFICATION FAILED ===');
+          console.error('Events that were "saved" but not found in Firebase:', missing);
+          console.error('This likely indicates a quota issue - writes are being silently rejected');
+          
+          // Check if any verification errors are quota-related
+          const quotaInVerification = missing.find(r => 
+            r.error && (
+              r.error.code === 'resource-exhausted' ||
+              String(r.error).toLowerCase().includes('quota')
+            )
+          );
+          
+          if (quotaInVerification || missing.length === successful.length) {
+            // All or most events missing - likely quota issue
+            const quotaErr = new Error('Firebase quota exceeded - writes are being silently rejected');
+            quotaErr.code = 'resource-exhausted';
+            throw quotaErr;
+          }
         } else {
-          console.error('WARNING: Most recent new event NOT found in Firebase after save!', mostRecentNewEvent.id);
+          console.log('Verification passed: All saved events confirmed in Firebase');
         }
       }
+      
+      // Mark only successfully saved events as saved
+      successful.forEach(r => lastSavedEventIds.add(r.event.id));
       
       // Also save to localStorage as backup
       saveToLocalStorage();
       // Don't call render() - real-time listener will update UI
     } catch(error){
-      console.error('Firestore save error:', error);
-      console.error('Error code:', error.code, 'Error message:', error.message);
-      console.error('Full error object:', error);
+      console.error('=== FIRESTORE SAVE ERROR CAUGHT ===');
+      console.error('Error object:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error string:', String(error));
+      console.error('Error keys:', Object.keys(error || {}));
+      if (error.originalError) {
+        console.error('Original error:', error.originalError);
+      }
       
-      // Check for quota errors more broadly
+      // Check for quota errors more broadly - check everything
+      const errStr = String(error).toLowerCase();
+      const msgStr = (error.message || '').toLowerCase();
+      const codeStr = (error.code || '').toLowerCase();
+      
       const isQuotaError = 
         error.code === 'resource-exhausted' ||
+        codeStr.includes('resource-exhausted') ||
+        codeStr.includes('quota') ||
         error.message?.includes('quota') ||
         error.message?.includes('Quota exceeded') ||
-        error.message === 'Firebase quota exceeded';
+        error.message === 'Firebase quota exceeded' ||
+        msgStr.includes('quota') ||
+        msgStr.includes('exceeded') ||
+        errStr.includes('quota') ||
+        errStr.includes('exceeded') ||
+        (error.originalError && (
+          error.originalError.code === 'resource-exhausted' ||
+          String(error.originalError).toLowerCase().includes('quota')
+        ));
+      
+      console.error('Is quota error?', isQuotaError);
       
       // Always show an alert - this is critical for user awareness
-      if(isQuotaError){
-        const quotaMessage = 'Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.';
-        console.error('QUOTA ERROR:', quotaMessage);
-        alert(quotaMessage);
-      } else {
-        const errorMessage = 'Error saving to Firebase: ' + (error.message || 'Unknown error') + '\n\nData saved locally. Please check your connection.';
-        console.error('SAVE ERROR:', errorMessage);
-        alert(errorMessage);
-      }
+      // Use setTimeout to ensure alert isn't blocked
+      setTimeout(() => {
+        if(isQuotaError){
+          const quotaMessage = 'Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.';
+          console.error('SHOWING QUOTA ERROR ALERT:', quotaMessage);
+          alert(quotaMessage);
+        } else {
+          const errorMessage = 'Error saving to Firebase: ' + (error.message || 'Unknown error') + '\n\nData saved locally. Please check your connection.';
+          console.error('SHOWING SAVE ERROR ALERT:', errorMessage);
+          alert(errorMessage);
+        }
+      }, 100);
       
       // Fallback to localStorage
       saveToLocalStorage();
