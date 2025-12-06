@@ -247,33 +247,54 @@ function calcBreastfeedingFromEvents(){
 async function save(){
   if(firestoreReady && isFirebaseAvailable()){
     try{
-      const { collection, doc, setDoc } = window.firestoreFunctions;
+      const { collection, doc, setDoc, getDoc } = window.firestoreFunctions;
       const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      
+      console.log('Saving', events.length, 'events to Firebase...');
       
       // Save all events to Firestore
       const savePromises = events.map(ev => {
         const eventDoc = doc(eventsRef, ev.id);
-        return setDoc(eventDoc, {
+        const eventData = {
           type: ev.type,
           ts: ev.ts,
           data: ev.data || {}
-        });
+        };
+        return setDoc(eventDoc, eventData, { merge: false });
       });
       
       await Promise.all(savePromises);
+      console.log('Successfully saved', events.length, 'events to Firebase');
+      
+      // Verify the save by reading back the most recent event
+      if(events.length > 0){
+        const mostRecentEvent = events[0];
+        const eventDoc = doc(eventsRef, mostRecentEvent.id);
+        const docSnap = await getDoc(eventDoc);
+        if(docSnap.exists()){
+          console.log('Verification: Most recent event confirmed in Firebase:', mostRecentEvent.id);
+        } else {
+          console.error('WARNING: Most recent event NOT found in Firebase after save!', mostRecentEvent.id);
+        }
+      }
+      
       // Also save to localStorage as backup
       saveToLocalStorage();
       // Don't call render() - real-time listener will update UI
     } catch(error){
       console.error('Firestore save error:', error);
+      console.error('Error code:', error.code, 'Error message:', error.message);
+      alert('Error saving to Firebase: ' + error.message + '\n\nData saved locally. Please check your connection.');
       // Fallback to localStorage
       saveToLocalStorage();
-  render();
+      render();
     }
   } else {
+    console.warn('Firebase not ready, saving to localStorage only');
+    console.warn('firestoreReady:', firestoreReady, 'isFirebaseAvailable:', isFirebaseAvailable());
     // Fallback to localStorage
     saveToLocalStorage();
-  render();
+    render();
   }
 }
 
