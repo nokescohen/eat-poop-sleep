@@ -2720,12 +2720,13 @@ function updateChartFeedings() {
       },
       scales: {
         x: {
+          display: true,
           title: {
             display: true,
             text: 'Date'
           }
         },
-        'y-ounces': {
+        y: {
           type: 'linear',
           position: 'left',
           beginAtZero: true,
@@ -2737,7 +2738,8 @@ function updateChartFeedings() {
             callback: function(value) {
               return value.toFixed(1) + ' oz';
             }
-          }
+          },
+          id: 'y-ounces'
         },
         'y-minutes': {
           type: 'linear',
