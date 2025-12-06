@@ -31,6 +31,9 @@ const elements = {
   errorBanner: document.getElementById('error-banner'),
   errorMessage: document.getElementById('error-message'),
   errorDismiss: document.getElementById('error-dismiss'),
+  chartIntervalFeedings: document.getElementById('chart-interval-feedings'),
+  chartTimeframeFeedings: document.getElementById('chart-timeframe-feedings'),
+  trendChartFeedings: document.getElementById('trend-chart-feedings'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
@@ -2439,6 +2442,282 @@ function aggregateDataForChart(stat, interval, timeframeDays) {
   return periods;
 }
 
+// Aggregate feeding data for the feedings chart
+function aggregateFeedingsData(interval, timeframeDays) {
+  const now = new Date();
+  let startDate = null;
+  let relevantEvents = events;
+  
+  if (timeframeDays !== null) {
+    startDate = new Date(now);
+    startDate.setDate(startDate.getDate() - timeframeDays);
+    startDate.setHours(0, 0, 0, 0);
+    relevantEvents = events.filter(ev => {
+      const evDate = new Date(ev.ts);
+      return evDate >= startDate;
+    });
+  } else {
+    if (events.length > 0) {
+      const earliestEvent = events.reduce((earliest, ev) => {
+        const evDate = new Date(ev.ts);
+        return evDate < earliest ? evDate : earliest;
+      }, new Date(events[0].ts));
+      startDate = new Date(earliestEvent);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 14);
+    }
+  }
+  
+  const dataMap = new Map();
+  const periods = [];
+  
+  // Initialize periods
+  if (timeframeDays === null) {
+    const daysDiff = Math.ceil((now - startDate) / (1000 * 60 * 60 * 24));
+    if (interval === 'daily') {
+      for (let i = daysDiff - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const key = formatDateLocal(date);
+        periods.push({ key, date, bottle: 0, breast: 0, pump: 0 });
+        dataMap.set(key, { bottle: 0, breast: 0, pump: 0 });
+      }
+    } else if (interval === 'weekly') {
+      const weeks = Math.ceil(daysDiff / 7);
+      for (let i = weeks - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (i * 7));
+        date.setHours(0, 0, 0, 0);
+        const dayOfWeek = date.getDay();
+        date.setDate(date.getDate() - dayOfWeek);
+        const key = formatDateLocal(date);
+        periods.push({ key, date, bottle: 0, breast: 0, pump: 0 });
+        dataMap.set(key, { bottle: 0, breast: 0, pump: 0 });
+      }
+    }
+  } else {
+    if (interval === 'daily') {
+      for (let i = timeframeDays - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        const key = formatDateLocal(date);
+        periods.push({ key, date, bottle: 0, breast: 0, pump: 0 });
+        dataMap.set(key, { bottle: 0, breast: 0, pump: 0 });
+      }
+    } else if (interval === 'weekly') {
+      const weeks = Math.ceil(timeframeDays / 7);
+      for (let i = weeks - 1; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (i * 7));
+        date.setHours(0, 0, 0, 0);
+        const dayOfWeek = date.getDay();
+        date.setDate(date.getDate() - dayOfWeek);
+        const key = formatDateLocal(date);
+        periods.push({ key, date, bottle: 0, breast: 0, pump: 0 });
+        dataMap.set(key, { bottle: 0, breast: 0, pump: 0 });
+      }
+    }
+  }
+  
+  // Aggregate bottle feeds
+  for (const ev of relevantEvents) {
+    if (ev.type === 'feed' && ev.data && ev.data.amount) {
+      const evDate = new Date(ev.ts);
+      let periodKey;
+      if (interval === 'daily') {
+        const dayStart = new Date(evDate);
+        dayStart.setHours(0, 0, 0, 0);
+        periodKey = formatDateLocal(dayStart);
+      } else {
+        const weekStart = new Date(evDate);
+        weekStart.setHours(0, 0, 0, 0);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek);
+        periodKey = formatDateLocal(weekStart);
+      }
+      if (periodKey && dataMap.has(periodKey)) {
+        const data = dataMap.get(periodKey);
+        data.bottle += Number(ev.data.amount);
+      }
+    }
+  }
+  
+  // Aggregate pump
+  for (const ev of relevantEvents) {
+    if (ev.type === 'pump' && ev.data && ev.data.amount) {
+      const evDate = new Date(ev.ts);
+      let periodKey;
+      if (interval === 'daily') {
+        const dayStart = new Date(evDate);
+        dayStart.setHours(0, 0, 0, 0);
+        periodKey = formatDateLocal(dayStart);
+      } else {
+        const weekStart = new Date(evDate);
+        weekStart.setHours(0, 0, 0, 0);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek);
+        periodKey = formatDateLocal(weekStart);
+      }
+      if (periodKey && dataMap.has(periodKey)) {
+        const data = dataMap.get(periodKey);
+        data.pump += Number(ev.data.amount);
+      }
+    }
+  }
+  
+  // Aggregate breastfeeding (calculate minutes from sessions)
+  let currentBreastStart = null;
+  for (const ev of relevantEvents.sort((a, b) => new Date(a.ts) - new Date(b.ts))) {
+    if (ev.type === 'breast_start') {
+      currentBreastStart = new Date(ev.ts);
+    } else if (ev.type === 'breast_end' && currentBreastStart) {
+      const breastEnd = new Date(ev.ts);
+      const breastMinutes = Math.round((breastEnd - currentBreastStart) / (1000 * 60));
+      
+      let periodKey;
+      if (interval === 'daily') {
+        const dayStart = new Date(currentBreastStart);
+        dayStart.setHours(0, 0, 0, 0);
+        periodKey = formatDateLocal(dayStart);
+      } else {
+        const weekStart = new Date(currentBreastStart);
+        weekStart.setHours(0, 0, 0, 0);
+        const dayOfWeek = weekStart.getDay();
+        weekStart.setDate(weekStart.getDate() - dayOfWeek);
+        periodKey = formatDateLocal(weekStart);
+      }
+      
+      if (periodKey && dataMap.has(periodKey)) {
+        const data = dataMap.get(periodKey);
+        data.breast += breastMinutes;
+      }
+      currentBreastStart = null;
+    }
+  }
+  
+  // Handle ongoing breastfeeding session
+  if (currentBreastStart && (startDate === null || currentBreastStart >= startDate)) {
+    const now = new Date();
+    const breastMinutes = Math.round((now - currentBreastStart) / (1000 * 60));
+    let periodKey;
+    if (interval === 'daily') {
+      const dayStart = new Date(currentBreastStart);
+      dayStart.setHours(0, 0, 0, 0);
+      periodKey = formatDateLocal(dayStart);
+    } else {
+      const weekStart = new Date(currentBreastStart);
+      weekStart.setHours(0, 0, 0, 0);
+      const dayOfWeek = weekStart.getDay();
+      weekStart.setDate(weekStart.getDate() - dayOfWeek);
+      periodKey = formatDateLocal(weekStart);
+    }
+    if (periodKey && dataMap.has(periodKey)) {
+      const data = dataMap.get(periodKey);
+      data.breast += breastMinutes;
+    }
+  }
+  
+  // Update periods with actual values
+  for (const period of periods) {
+    const data = dataMap.get(period.key) || { bottle: 0, breast: 0, pump: 0 };
+    period.bottle = data.bottle;
+    period.breast = data.breast;
+    period.pump = data.pump;
+  }
+  
+  return periods;
+}
+
+function updateChartFeedings() {
+  if (!elements.trendChartFeedings || typeof Chart === 'undefined') return;
+  
+  const interval = elements.chartIntervalFeedings.value;
+  const timeframe = elements.chartTimeframeFeedings.value === 'all' ? null : parseInt(elements.chartTimeframeFeedings.value);
+  
+  const data = aggregateFeedingsData(interval, timeframe);
+  
+  const labels = data.map(d => {
+    const [year, month, day] = d.key.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    if (interval === 'daily') {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      return `Week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    }
+  });
+  
+  if (trendChartInstanceFeedings) {
+    trendChartInstanceFeedings.destroy();
+  }
+  
+  trendChartInstanceFeedings = new Chart(elements.trendChartFeedings, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Bottle Feed (oz)',
+          data: data.map(d => d.bottle),
+          borderColor: '#0b84ff',
+          backgroundColor: 'rgba(11, 132, 255, 0.1)',
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Breastfeed (minutes)',
+          data: data.map(d => d.breast),
+          borderColor: '#ec4899',
+          backgroundColor: 'rgba(236, 72, 153, 0.1)',
+          tension: 0.4,
+          fill: true
+        },
+        {
+          label: 'Pump (oz)',
+          data: data.map(d => d.pump),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          tension: 0.4,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        datalabels: {
+          display: true,
+          color: '#374151',
+          anchor: 'end',
+          align: 'top',
+          formatter: function(value) {
+            if (value === 0) return '';
+            return value.toFixed(1);
+          },
+          font: {
+            size: 10,
+            weight: 'bold'
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    },
+    plugins: [ChartDataLabels]
+  });
+}
+
 function updateChartBaby() {
   if (!elements.trendChartBaby || typeof Chart === 'undefined') return;
   
@@ -2621,6 +2900,13 @@ function updateChartMama() {
 
 // Chart control event listeners
 elements.chartStatBaby.addEventListener('change', updateChartBaby);
+if(elements.chartIntervalFeedings){
+  elements.chartIntervalFeedings.addEventListener('change', updateChartFeedings);
+}
+if(elements.chartTimeframeFeedings){
+  elements.chartTimeframeFeedings.addEventListener('change', updateChartFeedings);
+}
+
 elements.chartIntervalBaby.addEventListener('change', updateChartBaby);
 elements.chartTimeframeBaby.addEventListener('change', updateChartBaby);
 
@@ -2712,6 +2998,7 @@ initFirebase().then(() => {
   // Initialize charts after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {
+      updateChartFeedings();
       updateChartBaby();
       updateChartMama();
     }
@@ -2727,6 +3014,7 @@ render();
   // Initialize charts after render
   setTimeout(() => {
     if (typeof Chart !== 'undefined') {
+      updateChartFeedings();
       updateChartBaby();
       updateChartMama();
     }

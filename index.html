@@ -85,6 +85,31 @@
       <h2>Trends</h2>
       
       <div class="chart-container">
+        <h3 class="chart-title">Feedings</h3>
+        <div class="chart-controls">
+          <div class="chart-control-group">
+            <label for="chart-interval-feedings">Interval:</label>
+            <select id="chart-interval-feedings" class="chart-select">
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+          <div class="chart-control-group">
+            <label for="chart-timeframe-feedings">Timeframe:</label>
+            <select id="chart-timeframe-feedings" class="chart-select">
+              <option value="7">1 Week</option>
+              <option value="14" selected>2 Weeks</option>
+              <option value="30">1 Month</option>
+              <option value="60">2 Months</option>
+              <option value="90">3 Months</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+        </div>
+        <canvas id="trend-chart-feedings"></canvas>
+      </div>
+      
+      <div class="chart-container">
         <h3 class="chart-title">Baby Stats</h3>
         <div class="chart-controls">
           <div class="chart-control-group">
