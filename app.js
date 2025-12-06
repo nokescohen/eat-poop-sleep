@@ -292,6 +292,9 @@ async function save(){
   if(firestoreReady && isFirebaseAvailable()){
     try{
       const { collection, doc, setDoc, getDoc } = window.firestoreFunctions;
+      
+      // Wrap the entire save operation in an additional try-catch to catch any errors
+      // that might escape the individual event saves
       const eventsRef = collection(window.db, EVENTS_COLLECTION);
       
       // Only save events that haven't been saved yet (new or modified)
@@ -314,8 +317,20 @@ async function save(){
             ts: ev.ts,
             data: ev.data || {}
           };
-          await setDoc(eventDoc, eventData, { merge: false });
-          return { success: true, event: ev };
+          try {
+            await setDoc(eventDoc, eventData, { merge: false });
+            
+            // Verify the document was actually saved by reading it back immediately
+            const verifyDoc = await getDoc(eventDoc);
+            if (!verifyDoc.exists()) {
+              throw new Error('Document was not saved - possible quota issue');
+            }
+            
+            return { success: true, event: ev };
+          } catch (setDocErr) {
+            // Re-throw to outer catch
+            throw setDocErr;
+          }
         } catch (err) {
           console.error('=== INDIVIDUAL EVENT SAVE ERROR ===');
           console.error('Event ID:', ev.id);
@@ -337,12 +352,16 @@ async function save(){
           
           if (isQuota) {
             console.error('QUOTA ERROR DETECTED IN INDIVIDUAL SAVE!');
+            // Show error immediately when detected
+            const quotaMessage = 'Firebase quota exceeded! You\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+            showError(quotaMessage, true);
           }
           
           return { success: false, event: ev, error: err };
         }
       });
       
+      // Use Promise.all to wait for all saves, but we've already handled errors individually
       const results = await Promise.all(savePromises);
       const successful = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);
@@ -2597,6 +2616,39 @@ render();
 });
 
 // Register service worker for PWA functionality
+// Global error handler to catch unhandled promise rejections (like Firebase quota errors)
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('=== UNHANDLED PROMISE REJECTION ===');
+  console.error('Error:', event.reason);
+  console.error('Promise:', event.promise);
+  
+  const error = event.reason;
+  if (error) {
+    const errStr = String(error).toLowerCase();
+    const msgStr = (error.message || '').toLowerCase();
+    const codeStr = (error.code || '').toLowerCase();
+    
+    const isQuotaError = 
+      error.code === 'resource-exhausted' ||
+      codeStr.includes('resource-exhausted') ||
+      codeStr.includes('quota') ||
+      error.message?.includes('quota') ||
+      error.message?.includes('Quota exceeded') ||
+      msgStr.includes('quota') ||
+      msgStr.includes('exceeded') ||
+      errStr.includes('quota') ||
+      errStr.includes('exceeded');
+    
+    if (isQuotaError) {
+      console.error('QUOTA ERROR DETECTED IN UNHANDLED REJECTION!');
+      const quotaMessage = 'Firebase quota exceeded! You\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+      showError(quotaMessage, true);
+      // Prevent default handling
+      event.preventDefault();
+    }
+  }
+});
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     // Automatically detect the correct path for service worker
