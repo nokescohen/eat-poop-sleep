@@ -275,15 +275,8 @@ function showError(message, isQuota = false) {
     banner.style.color = '#991b1b';
   }
   
-  // Show banner
+  // Show banner - user must dismiss manually
   banner.style.display = 'flex';
-  
-  // Auto-hide after 30 seconds for quota errors, 10 seconds for others
-  setTimeout(() => {
-    if (banner.style.display !== 'none') {
-      banner.style.display = 'none';
-    }
-  }, isQuota ? 30000 : 10000);
   
   console.log('ERROR BANNER SHOWN:', message);
 }
