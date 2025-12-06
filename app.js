@@ -317,13 +317,28 @@ async function save(){
           await setDoc(eventDoc, eventData, { merge: false });
           return { success: true, event: ev };
         } catch (err) {
-          console.error('Error saving individual event:', ev.id, err);
+          console.error('=== INDIVIDUAL EVENT SAVE ERROR ===');
+          console.error('Event ID:', ev.id);
+          console.error('Event type:', ev.type);
+          console.error('Error object:', err);
           console.error('Error details:', {
             code: err.code,
             message: err.message,
             name: err.name,
-            toString: String(err)
+            toString: String(err),
+            stack: err.stack
           });
+          
+          // Check if this is a quota error immediately
+          const isQuota = 
+            err.code === 'resource-exhausted' ||
+            String(err).toLowerCase().includes('quota') ||
+            (err.message && err.message.toLowerCase().includes('quota'));
+          
+          if (isQuota) {
+            console.error('QUOTA ERROR DETECTED IN INDIVIDUAL SAVE!');
+          }
+          
           return { success: false, event: ev, error: err };
         }
       });
@@ -493,7 +508,7 @@ async function save(){
       
       // Fallback to localStorage
       saveToLocalStorage();
-      render();
+  render();
       
       // Re-throw so addEvent can handle it if needed
       throw error;
