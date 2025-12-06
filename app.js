@@ -361,8 +361,24 @@ async function save(){
         }
       });
       
-      // Use Promise.all to wait for all saves, but we've already handled errors individually
-      const results = await Promise.all(savePromises);
+      // Use Promise.allSettled to ensure we catch all results, even if some fail
+      // This prevents one failure from stopping the others
+      const settledResults = await Promise.allSettled(savePromises);
+      const results = settledResults.map((result, idx) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          // Promise was rejected - this shouldn't happen since we catch in the map function
+          // but handle it anyway
+          console.error('Unexpected promise rejection:', result.reason);
+          return { 
+            success: false, 
+            event: eventsToSave[idx], 
+            error: result.reason 
+          };
+        }
+      });
+      
       const successful = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);
       
