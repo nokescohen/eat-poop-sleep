@@ -1666,6 +1666,40 @@ elements.btnClearCache.addEventListener('click', async () => {
   }
 });
 
+// Refresh sync button - manually reload data from Firebase
+if(elements.btnRefreshSync){
+  elements.btnRefreshSync.addEventListener('click', async () => {
+    if(!isFirebaseAvailable()){
+      alert('Firebase is not available. Please check your connection.');
+      return;
+    }
+    
+    try {
+      console.log('Manually refreshing data from Firebase...');
+      const { collection, getDocs, query, orderBy } = window.firestoreFunctions;
+      const eventsRef = collection(window.db, EVENTS_COLLECTION);
+      const q = query(eventsRef, orderBy('ts', 'desc'));
+      const snapshot = await getDocs(q);
+      
+      events = [];
+      snapshot.forEach((doc) => {
+        events.push({ id: doc.id, ...doc.data() });
+      });
+      events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+      
+      console.log('Refreshed', events.length, 'events from Firebase');
+      sleeping = calcSleepingFromEvents();
+      breastfeeding = calcBreastfeedingFromEvents();
+      render();
+      
+      alert(`Successfully refreshed ${events.length} events from Firebase.`);
+    } catch(error) {
+      console.error('Error refreshing from Firebase:', error);
+      alert('Error refreshing data: ' + error.message);
+    }
+  });
+}
+
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
