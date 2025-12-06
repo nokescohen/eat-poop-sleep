@@ -118,7 +118,24 @@ async function initFirebase(){
       },
       (error) => {
         console.error('Firebase real-time listener error:', error);
-        alert('Error syncing data: ' + error.message + '\n\nPlease refresh the page to reconnect.');
+        console.error('Listener error details:', {
+          code: error.code,
+          message: error.message,
+          name: error.name
+        });
+        
+        // Check if this is a quota error
+        const isQuota = 
+          error.code === 'resource-exhausted' ||
+          String(error).toLowerCase().includes('quota') ||
+          (error.message && error.message.toLowerCase().includes('quota'));
+        
+        if (isQuota) {
+          const quotaMessage = 'Firebase quota exceeded! You\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+          showError(quotaMessage, true);
+        } else {
+          alert('Error syncing data: ' + error.message + '\n\nPlease refresh the page to reconnect.');
+        }
       }
     );
     
