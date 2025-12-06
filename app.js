@@ -264,21 +264,50 @@ async function save(){
       console.log('Saving', eventsToSave.length, 'new/modified events to Firebase (out of', events.length, 'total)...');
       
       // Save only new/modified events to Firestore
-      const savePromises = eventsToSave.map(ev => {
-        const eventDoc = doc(eventsRef, ev.id);
-        const eventData = {
-          type: ev.type,
-          ts: ev.ts,
-          data: ev.data || {}
-        };
-        return setDoc(eventDoc, eventData, { merge: false });
+      // Use Promise.allSettled to catch individual errors
+      const savePromises = eventsToSave.map(async (ev) => {
+        try {
+          const eventDoc = doc(eventsRef, ev.id);
+          const eventData = {
+            type: ev.type,
+            ts: ev.ts,
+            data: ev.data || {}
+          };
+          await setDoc(eventDoc, eventData, { merge: false });
+          return { success: true, event: ev };
+        } catch (err) {
+          console.error('Error saving individual event:', ev.id, err);
+          return { success: false, event: ev, error: err };
+        }
       });
       
-      await Promise.all(savePromises);
-      console.log('Successfully saved', eventsToSave.length, 'events to Firebase');
+      const results = await Promise.all(savePromises);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
       
-      // Mark these events as saved
-      eventsToSave.forEach(ev => lastSavedEventIds.add(ev.id));
+      if (failed.length > 0) {
+        console.error('Failed to save', failed.length, 'out of', eventsToSave.length, 'events');
+        // Check if any failures are quota errors
+        const quotaError = failed.find(r => 
+          r.error && (
+            r.error.code === 'resource-exhausted' || 
+            r.error.message?.includes('quota') ||
+            r.error.message?.includes('Quota exceeded')
+          )
+        );
+        
+        if (quotaError) {
+          throw new Error('Firebase quota exceeded');
+        } else {
+          // Throw the first error to trigger the catch block
+          throw failed[0].error || new Error('Failed to save some events');
+        }
+      }
+      
+      console.log('Successfully saved', successful.length, 'events to Firebase');
+      
+      // Mark only successfully saved events as saved
+      successful.forEach(r => lastSavedEventIds.add(r.event.id));
       
       // Verify the save by reading back the most recent new event
       if(eventsToSave.length > 0){
@@ -298,17 +327,32 @@ async function save(){
     } catch(error){
       console.error('Firestore save error:', error);
       console.error('Error code:', error.code, 'Error message:', error.message);
+      console.error('Full error object:', error);
       
-      // If it's a quota error, show a helpful message
-      if(error.code === 'resource-exhausted'){
-        alert('Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.');
+      // Check for quota errors more broadly
+      const isQuotaError = 
+        error.code === 'resource-exhausted' ||
+        error.message?.includes('quota') ||
+        error.message?.includes('Quota exceeded') ||
+        error.message === 'Firebase quota exceeded';
+      
+      // Always show an alert - this is critical for user awareness
+      if(isQuotaError){
+        const quotaMessage = 'Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.';
+        console.error('QUOTA ERROR:', quotaMessage);
+        alert(quotaMessage);
       } else {
-        alert('Error saving to Firebase: ' + error.message + '\n\nData saved locally. Please check your connection.');
+        const errorMessage = 'Error saving to Firebase: ' + (error.message || 'Unknown error') + '\n\nData saved locally. Please check your connection.';
+        console.error('SAVE ERROR:', errorMessage);
+        alert(errorMessage);
       }
       
       // Fallback to localStorage
       saveToLocalStorage();
       render();
+      
+      // Re-throw so addEvent can handle it if needed
+      throw error;
     }
   } else {
     console.warn('Firebase not ready, saving to localStorage only');
@@ -335,7 +379,12 @@ async function addEvent(type, data = {}){
     recentSameType.data.amount = currentAmount + newAmount;
     // Mark as modified (remove from saved set so it gets saved again)
     lastSavedEventIds.delete(recentSameType.id);
-    await save();
+    try {
+      await save();
+    } catch (error) {
+      // Error is already handled and alerted in save()
+      console.error('addEvent: Save failed for aggregated event:', recentSameType.id, error);
+    }
     return;
   }
   
@@ -353,8 +402,16 @@ async function addEvent(type, data = {}){
   
   events.unshift(ev); // newest first
   console.log('New event added:', ev.id, ev.type, ev.ts);
-  await save();
-  console.log('Event saved to Firebase:', ev.id);
+  
+  try {
+    await save();
+    console.log('Event saved to Firebase:', ev.id);
+  } catch (error) {
+    // Error is already handled and alerted in save(), but log here too
+    console.error('addEvent: Save failed for event:', ev.id, error);
+    // Don't remove the event from local array - it's saved to localStorage as fallback
+    // The error alert has already been shown by save()
+  }
 }
 
 async function undoLast(){
