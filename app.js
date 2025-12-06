@@ -1701,12 +1701,15 @@ if(elements.btnRefreshSync){
 }
 
 // Debug Firebase button - check what's actually in Firebase
-if(elements.btnDebugFirebase){
-  console.log('Debug Firebase button found, attaching listener');
-  elements.btnDebugFirebase.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Debug Firebase button clicked!');
+function setupDebugButton(){
+  const btn = document.getElementById('btn-debug-firebase');
+  if(btn){
+    console.log('Debug Firebase button found, attaching listener');
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Debug Firebase button clicked!');
+      alert('Debug button clicked! Checking Firebase...');
     
     if(!isFirebaseAvailable()){
       alert('Firebase is not available.');
