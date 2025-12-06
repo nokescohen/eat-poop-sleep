@@ -2666,7 +2666,8 @@ function updateChartFeedings() {
           borderColor: '#0b84ff',
           backgroundColor: 'rgba(11, 132, 255, 0.1)',
           tension: 0.4,
-          fill: true
+          fill: true,
+          yAxisID: 'y-ounces'
         },
         {
           label: 'Breastfeed (minutes)',
@@ -2674,7 +2675,8 @@ function updateChartFeedings() {
           borderColor: '#ec4899',
           backgroundColor: 'rgba(236, 72, 153, 0.1)',
           tension: 0.4,
-          fill: true
+          fill: true,
+          yAxisID: 'y-minutes'
         },
         {
           label: 'Pump (oz)',
@@ -2682,7 +2684,8 @@ function updateChartFeedings() {
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           tension: 0.4,
-          fill: true
+          fill: true,
+          yAxisID: 'y-ounces'
         }
       ]
     },
@@ -2699,9 +2702,14 @@ function updateChartFeedings() {
           color: '#374151',
           anchor: 'end',
           align: 'top',
-          formatter: function(value) {
+          formatter: function(value, context) {
             if (value === 0) return '';
-            return value.toFixed(1);
+            const datasetLabel = context.dataset.label;
+            if (datasetLabel.includes('minutes')) {
+              return Math.round(value) + 'm';
+            } else {
+              return value.toFixed(1) + 'oz';
+            }
           },
           font: {
             size: 10,
@@ -2710,8 +2718,42 @@ function updateChartFeedings() {
         }
       },
       scales: {
-        y: {
-          beginAtZero: true
+        x: {
+          title: {
+            display: true,
+            text: 'Date'
+          }
+        },
+        'y-ounces': {
+          type: 'linear',
+          position: 'left',
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Ounces (oz)'
+          },
+          ticks: {
+            callback: function(value) {
+              return value.toFixed(1) + ' oz';
+            }
+          }
+        },
+        'y-minutes': {
+          type: 'linear',
+          position: 'right',
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Minutes'
+          },
+          ticks: {
+            callback: function(value) {
+              return Math.round(value) + ' min';
+            }
+          },
+          grid: {
+            drawOnChartArea: false
+          }
         }
       }
     },
