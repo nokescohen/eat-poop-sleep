@@ -1245,7 +1245,7 @@ async function editTimestamp(ev){
   render();
 }
 
-function editQuantity(ev){
+async function editQuantity(ev){
   const currentAmount = ev.data && ev.data.amount ? ev.data.amount : 0;
   const newAmountStr = prompt('Edit amount (oz):', currentAmount);
   if(newAmountStr === null) return; // User cancelled
@@ -1258,7 +1258,10 @@ function editQuantity(ev){
   
   if(!ev.data) ev.data = {};
   ev.data.amount = newAmount;
-  save();
+  // Mark as modified so it gets saved
+  lastSavedEventIds.delete(ev.id);
+  await save();
+  render();
 }
 
 function render(){
