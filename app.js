@@ -334,6 +334,8 @@ async function addEvent(type, data = {}){
     const currentAmount = Number(recentSameType.data.amount) || 0;
     const newAmount = Number(data.amount) || 0;
     recentSameType.data.amount = currentAmount + newAmount;
+    // Mark as modified (remove from saved set so it gets saved again)
+    lastSavedEventIds.delete(recentSameType.id);
     await save();
     return;
   }
