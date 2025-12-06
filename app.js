@@ -346,16 +346,43 @@ async function save(){
             data: ev.data || {}
           };
           try {
+            console.log('Attempting to save event:', ev.id);
             await setDoc(eventDoc, eventData, { merge: false });
+            console.log('setDoc completed for event:', ev.id);
             
-            // Verify the document was actually saved by reading it back immediately
+            // Wait a moment for Firebase to process
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Verify the document was actually saved by reading it back
+            console.log('Verifying event exists in Firebase:', ev.id);
             const verifyDoc = await getDoc(eventDoc);
+            console.log('Verification result for', ev.id, ':', verifyDoc.exists());
+            
             if (!verifyDoc.exists()) {
-              throw new Error('Document was not saved - possible quota issue');
+              console.error('VERIFICATION FAILED: Event', ev.id, 'not found in Firebase!');
+              // Show error immediately
+              const quotaMessage = 'Firebase quota exceeded! Your event was not saved to Firebase. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+              showError(quotaMessage, true);
+              throw new Error('Document was not saved - Firebase quota exceeded');
             }
             
+            console.log('Event', ev.id, 'successfully saved and verified');
             return { success: true, event: ev };
           } catch (setDocErr) {
+            console.error('setDoc error for event', ev.id, ':', setDocErr);
+            // Check if it's a quota error
+            const isQuota = 
+              setDocErr.code === 'resource-exhausted' ||
+              String(setDocErr).toLowerCase().includes('quota') ||
+              (setDocErr.message && setDocErr.message.toLowerCase().includes('quota')) ||
+              (setDocErr.message && setDocErr.message.toLowerCase().includes('exceeded'));
+            
+            if (isQuota) {
+              console.error('QUOTA ERROR DETECTED in setDoc catch!');
+              const quotaMessage = 'Firebase quota exceeded! You\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+              showError(quotaMessage, true);
+            }
+            
             // Re-throw to outer catch
             throw setDocErr;
           }
