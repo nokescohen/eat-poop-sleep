@@ -461,6 +461,11 @@ async function save(){
           console.error('Events that were "saved" but not found in Firebase:', missing);
           console.error('This likely indicates a quota issue - writes are being silently rejected');
           
+          // Show error immediately - this is definitely a quota issue
+          const quotaMessage = 'Firebase quota exceeded! Your event was not saved to Firebase. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+          console.error('SHOWING QUOTA ERROR FROM VERIFICATION:', quotaMessage);
+          showError(quotaMessage, true);
+          
           // Check if any verification errors are quota-related
           const quotaInVerification = missing.find(r => 
             r.error && (
