@@ -1957,6 +1957,13 @@ if(elements.btnRefreshSync){
 elements.btnExport.addEventListener('click', exportCSV);
 elements.btnExportSummary.addEventListener('click', exportDailySummary);
 
+// Error banner dismiss button
+if(elements.errorDismiss){
+  elements.errorDismiss.addEventListener('click', () => {
+    hideError();
+  });
+}
+
 // Helper function to format date as YYYY-MM-DD in local timezone
 function formatDateLocal(date) {
   const year = date.getFullYear();
