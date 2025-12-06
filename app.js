@@ -1773,9 +1773,12 @@ if(elements.btnDebugFirebase){
       
     } catch(error) {
       console.error('Error debugging Firebase:', error);
-      alert('Error: ' + error.message);
+      alert('Error: ' + error.message + '\n\nCheck the browser console for details.');
     }
   });
+  console.log('Debug Firebase event listener attached');
+} else {
+  console.error('Debug Firebase button not found in DOM!');
 }
 
 elements.btnExport.addEventListener('click', exportCSV);
