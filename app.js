@@ -1230,6 +1230,9 @@ function editTimestamp(ev){
   // Update the event timestamp
   ev.ts = newDate.toISOString();
   
+  // Mark event as modified so it gets saved to Firebase
+  lastSavedEventIds.delete(ev.id);
+  
   // If this is a sleep event, recalculate sleeping state
   if(ev.type === 'sleep_start' || ev.type === 'sleep_end'){
     sleeping = calcSleepingFromEvents();
@@ -1238,7 +1241,8 @@ function editTimestamp(ev){
   // Re-sort events by timestamp (newest first)
   events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
   
-  save();
+  await save();
+  render();
 }
 
 function editQuantity(ev){
@@ -1567,7 +1571,10 @@ function render(){
             return;
           }
           ev.startEvent.ts = newStartDate.toISOString();
-          save();
+          // Mark as modified so it gets saved
+          lastSavedEventIds.delete(ev.startEvent.id);
+          await save();
+          render();
         }
         
         // Format end time for prompt (same format as regular events: YYYY-MM-DD HH:MM)
@@ -1593,7 +1600,10 @@ function render(){
             return;
           }
           ev.endEvent.ts = newEndDate.toISOString();
-          save();
+          // Mark as modified so it gets saved
+          lastSavedEventIds.delete(ev.endEvent.id);
+          await save();
+          render();
         }
       };
       
