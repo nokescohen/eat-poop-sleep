@@ -189,6 +189,7 @@ h1{margin:0 0 12px;font-size:20px}
   font-family:inherit;
 }
 #trend-chart-feedings, #trend-chart-baby, #trend-chart-mama{
+  height:300px !important;
   max-height:300px;
   width:100%;
 }
