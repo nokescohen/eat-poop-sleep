@@ -616,6 +616,35 @@ async function addEvent(type, data = {}){
   try {
     await save();
     console.log('Event saved to Firebase:', ev.id);
+    
+    // CRITICAL: Verify the event actually exists in Firebase after save
+    // This catches cases where save() doesn't throw but the write silently fails
+    if(firestoreReady && isFirebaseAvailable()){
+      try {
+        // Wait a moment for Firebase to process
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const { doc, getDoc } = window.firestoreFunctions;
+        const { collection } = window.firestoreFunctions;
+        const eventsRef = collection(window.db, EVENTS_COLLECTION);
+        const eventDoc = doc(eventsRef, ev.id);
+        const docSnap = await getDoc(eventDoc);
+        
+        if (!docSnap.exists()) {
+          console.error('=== VERIFICATION FAILED IN addEvent ===');
+          console.error('Event', ev.id, 'was not found in Firebase after save!');
+          const quotaMessage = 'Firebase quota exceeded! Your event was not saved to Firebase. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+          showError(quotaMessage, true);
+        } else {
+          console.log('Verification passed: Event', ev.id, 'confirmed in Firebase');
+        }
+      } catch (verifyErr) {
+        console.error('Error verifying event in Firebase:', verifyErr);
+        // If verification itself fails, it might be a quota issue
+        const quotaMessage = 'Firebase quota exceeded! Unable to verify your event was saved. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+        showError(quotaMessage, true);
+      }
+    }
   } catch (error) {
     // Error is already handled and alerted in save(), but log here too
     console.error('addEvent: Save failed for event:', ev.id, error);
