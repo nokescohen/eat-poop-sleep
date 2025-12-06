@@ -77,3 +77,5 @@ nohup python3 backend.py > backend.log 2>&1 &
 
 The frontend can optionally sync events to the backend by calling `/save-events` with the events data. This allows the backend to access events even when the browser is closed.
 
+
+

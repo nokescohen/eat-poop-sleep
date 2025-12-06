@@ -112,3 +112,5 @@ If you have existing data in localStorage:
 2. After setting up Firebase, use **"Import Data"** to upload it
 3. Your data will now sync across all devices!
 
+
+

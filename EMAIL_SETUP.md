@@ -78,3 +78,5 @@ To change recipients, edit `.github/scripts/send_daily_email.py` or the `RECIPIE
 - Use the "Send Test Email" button in the app
 - Or manually trigger the workflow in Actions tab
 
+
+

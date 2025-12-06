@@ -28,6 +28,9 @@ const elements = {
   btnExportSummary: document.getElementById('btn-export-summary'),
   btnClearCache: document.getElementById('btn-clear-cache'),
   btnRefreshSync: document.getElementById('btn-refresh-sync'),
+  errorBanner: document.getElementById('error-banner'),
+  errorMessage: document.getElementById('error-message'),
+  errorDismiss: document.getElementById('error-dismiss'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
@@ -247,6 +250,51 @@ function calcBreastfeedingFromEvents(){
   return false;
 }
 
+// Show error message in UI banner
+function showError(message, isQuota = false) {
+  if (!elements.errorBanner || !elements.errorMessage) {
+    console.error('Error banner elements not found, falling back to alert');
+    alert(message);
+    return;
+  }
+  
+  const banner = elements.errorBanner;
+  const msgEl = elements.errorMessage;
+  
+  // Update message
+  msgEl.textContent = message;
+  
+  // Update styling for quota errors
+  if (isQuota) {
+    banner.style.background = '#fef3c7';
+    banner.style.borderColor = '#f59e0b';
+    banner.style.color = '#92400e';
+  } else {
+    banner.style.background = '#fee2e2';
+    banner.style.borderColor = '#ef4444';
+    banner.style.color = '#991b1b';
+  }
+  
+  // Show banner
+  banner.style.display = 'flex';
+  
+  // Auto-hide after 30 seconds for quota errors, 10 seconds for others
+  setTimeout(() => {
+    if (banner.style.display !== 'none') {
+      banner.style.display = 'none';
+    }
+  }, isQuota ? 30000 : 10000);
+  
+  console.log('ERROR BANNER SHOWN:', message);
+}
+
+// Hide error banner
+function hideError() {
+  if (elements.errorBanner) {
+    elements.errorBanner.style.display = 'none';
+  }
+}
+
 async function save(){
   if(firestoreReady && isFirebaseAvailable()){
     try{
@@ -277,6 +325,12 @@ async function save(){
           return { success: true, event: ev };
         } catch (err) {
           console.error('Error saving individual event:', ev.id, err);
+          console.error('Error details:', {
+            code: err.code,
+            message: err.message,
+            name: err.name,
+            toString: String(err)
+          });
           return { success: false, event: ev, error: err };
         }
       });
@@ -425,19 +479,24 @@ async function save(){
       
       console.error('Is quota error?', isQuotaError);
       
-      // Always show an alert - this is critical for user awareness
-      // Use setTimeout to ensure alert isn't blocked
-      setTimeout(() => {
-        if(isQuotaError){
-          const quotaMessage = 'Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.';
-          console.error('SHOWING QUOTA ERROR ALERT:', quotaMessage);
-          alert(quotaMessage);
-        } else {
-          const errorMessage = 'Error saving to Firebase: ' + (error.message || 'Unknown error') + '\n\nData saved locally. Please check your connection.';
-          console.error('SHOWING SAVE ERROR ALERT:', errorMessage);
-          alert(errorMessage);
-        }
-      }, 100);
+      // Show error in UI banner immediately
+      if(isQuotaError){
+        const quotaMessage = 'Firebase quota exceeded! You\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited. Consider upgrading your Firebase plan or waiting until the quota resets (daily). Your data is still saved locally.';
+        console.error('SHOWING QUOTA ERROR:', quotaMessage);
+        showError(quotaMessage, true);
+        // Also show alert as backup
+        setTimeout(() => {
+          alert('Firebase quota exceeded!\n\nYou\'ve hit Firebase\'s free tier limits. The app will continue to work locally, but sync may be limited.\n\nConsider:\n- Upgrading your Firebase plan\n- Waiting until the quota resets (daily)\n\nYour data is still saved locally.');
+        }, 100);
+      } else {
+        const errorMessage = 'Error saving to Firebase: ' + (error.message || 'Unknown error') + '. Data saved locally. Please check your connection.';
+        console.error('SHOWING SAVE ERROR:', errorMessage);
+        showError(errorMessage, false);
+        // Also show alert as backup
+        setTimeout(() => {
+          alert('Error saving to Firebase: ' + (error.message || 'Unknown error') + '\n\nData saved locally. Please check your connection.');
+        }, 100);
+      }
       
       // Fallback to localStorage
       saveToLocalStorage();

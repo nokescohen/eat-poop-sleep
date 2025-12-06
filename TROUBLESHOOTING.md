@@ -70,3 +70,5 @@ If it works locally but not on GitHub Pages, there's likely a configuration issu
 3. Check GitHub status: https://www.githubstatus.com/
 4. Try accessing: https://nokescohen.github.io/eat-poop-sleep/index.html (with explicit filename)
 
+
+

@@ -56,3 +56,5 @@ The app will automatically create a Gist on first use. You can also create it ma
 - GitHub API rate limits: 5,000 requests/hour (plenty for this app)
 - Requires internet connection
 
+
+
