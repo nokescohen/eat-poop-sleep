@@ -29,7 +29,6 @@ const elements = {
   btnClearCache: document.getElementById('btn-clear-cache'),
   btnRefreshSync: document.getElementById('btn-refresh-sync'),
   btnDebugFirebase: document.getElementById('btn-debug-firebase'),
-  btnRefreshSync: document.getElementById('btn-refresh-sync'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
@@ -1703,13 +1702,19 @@ if(elements.btnRefreshSync){
 
 // Debug Firebase button - check what's actually in Firebase
 if(elements.btnDebugFirebase){
-  elements.btnDebugFirebase.addEventListener('click', async () => {
+  console.log('Debug Firebase button found, attaching listener');
+  elements.btnDebugFirebase.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('Debug Firebase button clicked!');
+    
     if(!isFirebaseAvailable()){
       alert('Firebase is not available.');
       return;
     }
     
     try {
+      console.log('Starting Firebase debug query...');
       const { collection, getDocs, query, orderBy } = window.firestoreFunctions;
       const eventsRef = collection(window.db, EVENTS_COLLECTION);
       const q = query(eventsRef, orderBy('ts', 'desc'));
