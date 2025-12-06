@@ -1198,7 +1198,7 @@ function toggleBreast(){
   render();
 }
 
-function editTimestamp(ev){
+async function editTimestamp(ev){
   // Convert ISO timestamp to datetime-local format (YYYY-MM-DDTHH:mm)
   const d = new Date(ev.ts);
   const year = d.getFullYear();
