@@ -2729,8 +2729,18 @@ function updateChartFeedings() {
         x: {
           display: true,
           title: {
-            display: true,
-            text: 'Date'
+            display: window.innerWidth >= 420,
+            text: 'Date',
+            font: {
+              size: window.innerWidth < 420 ? 10 : 12
+            }
+          },
+          ticks: {
+            font: {
+              size: window.innerWidth < 420 ? 9 : 11
+            },
+            maxRotation: window.innerWidth < 420 ? 45 : 0,
+            minRotation: window.innerWidth < 420 ? 45 : 0
           }
         },
         y: {
@@ -2738,11 +2748,20 @@ function updateChartFeedings() {
           position: 'left',
           beginAtZero: true,
           title: {
-            display: true,
-            text: 'Ounces (oz)'
+            display: window.innerWidth >= 420,
+            text: 'Ounces (oz)',
+            font: {
+              size: window.innerWidth < 420 ? 10 : 12
+            }
           },
           ticks: {
+            font: {
+              size: window.innerWidth < 420 ? 9 : 11
+            },
             callback: function(value) {
+              if (window.innerWidth < 420) {
+                return value.toFixed(0);
+              }
               return value.toFixed(1) + ' oz';
             }
           },
@@ -2753,11 +2772,20 @@ function updateChartFeedings() {
           position: 'right',
           beginAtZero: true,
           title: {
-            display: true,
-            text: 'Minutes'
+            display: window.innerWidth >= 420,
+            text: 'Minutes',
+            font: {
+              size: window.innerWidth < 420 ? 10 : 12
+            }
           },
           ticks: {
+            font: {
+              size: window.innerWidth < 420 ? 9 : 11
+            },
             callback: function(value) {
+              if (window.innerWidth < 420) {
+                return Math.round(value);
+              }
               return Math.round(value) + ' min';
             }
           },
