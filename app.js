@@ -27,6 +27,7 @@ const elements = {
   btnExport: document.getElementById('btn-export'),
   btnExportSummary: document.getElementById('btn-export-summary'),
   btnClearCache: document.getElementById('btn-clear-cache'),
+  btnRefreshSync: document.getElementById('btn-refresh-sync'),
   chartStatBaby: document.getElementById('chart-stat-baby'),
   chartIntervalBaby: document.getElementById('chart-interval-baby'),
   chartTimeframeBaby: document.getElementById('chart-timeframe-baby'),
@@ -94,17 +95,25 @@ async function initFirebase(){
     render();
     
     // Set up real-time listener for sync across devices
-    unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-      events = [];
-      snapshot.forEach((doc) => {
-        events.push({ id: doc.id, ...doc.data() });
-      });
-      // Ensure events are sorted by timestamp (newest first) after loading from Firebase
-      events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-      sleeping = calcSleepingFromEvents();
-      breastfeeding = calcBreastfeedingFromEvents();
-      render();
-    });
+    unsubscribeFirestore = onSnapshot(q, 
+      (snapshot) => {
+        console.log('Firebase snapshot received, document count:', snapshot.size);
+        events = [];
+        snapshot.forEach((doc) => {
+          events.push({ id: doc.id, ...doc.data() });
+        });
+        // Ensure events are sorted by timestamp (newest first) after loading from Firebase
+        events.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        console.log('Events loaded from Firebase:', events.length);
+        sleeping = calcSleepingFromEvents();
+        breastfeeding = calcBreastfeedingFromEvents();
+        render();
+      },
+      (error) => {
+        console.error('Firebase real-time listener error:', error);
+        alert('Error syncing data: ' + error.message + '\n\nPlease refresh the page to reconnect.');
+      }
+    );
     
     firestoreReady = true;
     console.log('Firebase connected, real-time sync enabled');
@@ -2187,7 +2196,7 @@ elements.datePicker.addEventListener('change', (e) => {
   const dateStr = e.target.value; // Format: YYYY-MM-DD
   const [year, month, day] = dateStr.split('-').map(Number);
   selectedDate = new Date(year, month - 1, day); // month is 0-indexed
-  render();
+render();
 });
 
 // Category filter event listener
