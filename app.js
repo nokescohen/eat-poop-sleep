@@ -252,33 +252,44 @@ function calcBreastfeedingFromEvents(){
 
 // Show error message in UI banner
 function showError(message, isQuota = false) {
-  if (!elements.errorBanner || !elements.errorMessage) {
-    console.error('Error banner elements not found, falling back to alert');
-    alert(message);
-    return;
-  }
+  console.error('showError called:', message, 'isQuota:', isQuota);
   
-  const banner = elements.errorBanner;
-  const msgEl = elements.errorMessage;
-  
-  // Update message
-  msgEl.textContent = message;
-  
-  // Update styling for quota errors
+  // Always show alert as primary method (most reliable)
   if (isQuota) {
-    banner.style.background = '#fef3c7';
-    banner.style.borderColor = '#f59e0b';
-    banner.style.color = '#92400e';
+    alert('⚠️ Firebase Quota Exceeded!\n\n' + message);
   } else {
-    banner.style.background = '#fee2e2';
-    banner.style.borderColor = '#ef4444';
-    banner.style.color = '#991b1b';
+    alert('⚠️ Error Saving to Firebase\n\n' + message);
   }
   
-  // Show banner - user must dismiss manually
-  banner.style.display = 'flex';
-  
-  console.log('ERROR BANNER SHOWN:', message);
+  // Also try to show banner if elements exist
+  if (elements.errorBanner && elements.errorMessage) {
+    const banner = elements.errorBanner;
+    const msgEl = elements.errorMessage;
+    
+    // Update message
+    msgEl.textContent = message;
+    
+    // Update styling for quota errors
+    if (isQuota) {
+      banner.style.background = '#fef3c7';
+      banner.style.borderColor = '#f59e0b';
+      banner.style.color = '#92400e';
+    } else {
+      banner.style.background = '#fee2e2';
+      banner.style.borderColor = '#ef4444';
+      banner.style.color = '#991b1b';
+    }
+    
+    // Show banner - user must dismiss manually
+    banner.style.display = 'flex';
+    
+    console.log('ERROR BANNER SHOWN:', message);
+  } else {
+    console.error('Error banner elements not found:', {
+      errorBanner: !!elements.errorBanner,
+      errorMessage: !!elements.errorMessage
+    });
+  }
 }
 
 // Hide error banner
