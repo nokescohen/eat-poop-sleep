@@ -2692,14 +2692,21 @@ function updateChartFeedings() {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 2.5,
+      aspectRatio: window.innerWidth < 420 ? 1.5 : 2.5,
       plugins: {
         legend: {
           display: true,
-          position: 'top'
+          position: window.innerWidth < 420 ? 'bottom' : 'top',
+          labels: {
+            boxWidth: window.innerWidth < 420 ? 10 : 12,
+            padding: window.innerWidth < 420 ? 8 : 10,
+            font: {
+              size: window.innerWidth < 420 ? 10 : 12
+            }
+          }
         },
         datalabels: {
-          display: true,
+          display: window.innerWidth >= 420,
           color: '#374151',
           anchor: 'end',
           align: 'top',
@@ -2713,7 +2720,7 @@ function updateChartFeedings() {
             }
           },
           font: {
-            size: 10,
+            size: window.innerWidth < 420 ? 8 : 10,
             weight: 'bold'
           }
         }

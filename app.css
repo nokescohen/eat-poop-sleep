@@ -192,6 +192,28 @@ h1{margin:0 0 12px;font-size:20px}
   height:300px !important;
   max-height:300px;
   width:100%;
+  position: relative;
+}
+
+@media (max-width:420px){
+  #trend-chart-feedings, #trend-chart-baby, #trend-chart-mama{
+    height:250px !important;
+    max-height:250px;
+  }
+  
+  .chart-controls{
+    flex-direction:column;
+    gap:8px;
+  }
+  
+  .chart-control-group{
+    width:100%;
+  }
+  
+  .chart-select{
+    flex:1;
+    min-width:0;
+  }
 }
 
 .error-banner {
