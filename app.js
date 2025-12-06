@@ -323,6 +323,11 @@ function hideError() {
 async function save(){
   if(firestoreReady && isFirebaseAvailable()){
     try{
+      // Check if firestoreFunctions is available and has getDoc
+      if (!window.firestoreFunctions || !window.firestoreFunctions.getDoc) {
+        console.error('Firestore functions not available:', window.firestoreFunctions);
+        throw new Error('Firebase functions not initialized');
+      }
       const { collection, doc, setDoc, getDoc } = window.firestoreFunctions;
       
       // Wrap the entire save operation in an additional try-catch to catch any errors
