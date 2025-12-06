@@ -1543,7 +1543,7 @@ function render(){
       meta.style.cursor = 'pointer';
       meta.style.textDecoration = 'underline';
       meta.title = 'Click to edit times';
-      meta.onclick = () => {
+      meta.onclick = async () => {
         // When editing a session, allow editing both start and end times
         // Use the same format as regular events: YYYY-MM-DD HH:MM
         const now = new Date();
