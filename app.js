@@ -53,6 +53,7 @@ let lastSavedEventIds = new Set(); // Track which events have been saved to Fire
 let selectedDate = new Date(); // Default to today
 let selectedCategory = 'all'; // Default to 'all' (Baby/Mama/All filter)
 let selectedActivity = 'all'; // Default to 'all' (Activity type filter)
+let trendChartInstanceFeedings = null; // Chart.js instance for Feedings
 let trendChartInstanceBaby = null; // Chart.js instance for Baby
 let trendChartInstanceMama = null; // Chart.js instance for Mama
 
