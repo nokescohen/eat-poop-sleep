@@ -1778,10 +1778,18 @@ function setupDebugButton(){
       console.error('Error debugging Firebase:', error);
       alert('Error: ' + error.message + '\n\nCheck the browser console for details.');
     }
-  });
-  console.log('Debug Firebase event listener attached');
+    });
+    console.log('Debug Firebase event listener attached');
+  } else {
+    console.error('Debug Firebase button not found in DOM!');
+  }
+}
+
+// Set up debug button after DOM is ready
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', setupDebugButton);
 } else {
-  console.error('Debug Firebase button not found in DOM!');
+  setupDebugButton();
 }
 
 elements.btnExport.addEventListener('click', exportCSV);
