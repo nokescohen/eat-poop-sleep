@@ -1,7 +1,7 @@
 // Service Worker for Eat-Poop-Sleep Tracker
 // Enables offline functionality and caching
 
-const CACHE_NAME = 'eps-tracker-v2';
+const CACHE_NAME = 'eps-tracker-v3';
 // Get the base path for GitHub Pages (works for both root and subdirectory)
 const basePath = self.location.pathname.split('/').slice(0, -1).join('/') || '/';
 const urlsToCache = [
