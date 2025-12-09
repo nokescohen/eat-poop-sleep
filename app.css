@@ -1,19 +1,22 @@
 :root{
-  --bg:#fcfcfd;
-  --card:#ffffff;
+  --bg:#1a1a1a;
+  --card:#2d2d2d;
   --accent:#0b84ff;
   --danger:#ff6b6b;
-  --muted:#6b7280;
+  --muted:#9ca3af;
   --success:#34d399;
-  --glass: rgba(0,0,0,0.04);
+  --glass: rgba(255,255,255,0.05);
+  --text-primary:#ffffff;
+  --text-secondary:#d1d5db;
+  --border:#404040;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 *{box-sizing:border-box}
 body{
   margin:0;
-  background:linear-gradient(180deg,var(--bg),#f7f9fc);
-  color:#111827;
+  background:linear-gradient(180deg,var(--bg),#0f0f0f);
+  color:var(--text-primary);
   min-height:100vh;
   display:flex;
   align-items:center;
@@ -27,11 +30,12 @@ body{
   background:var(--card);
   border-radius:12px;
   padding:18px;
-  box-shadow:0 6px 20px rgba(15,23,42,0.08);
+  box-shadow:0 6px 20px rgba(0,0,0,0.3);
+  border:1px solid var(--border);
 }
 
-h1{margin:0 0 12px;font-size:20px}
-.section-title{margin:16px 0 8px;font-size:16px;font-weight:600;color:#374151}
+h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
+.section-title{margin:16px 0 8px;font-size:16px;font-weight:600;color:var(--text-secondary)}
 .buttons{display:flex;gap:10px;margin-bottom:12px}
 .big{
   flex:1;
@@ -49,10 +53,12 @@ h1{margin:0 0 12px;font-size:20px}
 }
 .sleep{background:linear-gradient(180deg,#8b5cf6,#7c3aed)}
 .breast{background:linear-gradient(180deg,#f472b6,#ec4899)}
-.feed{background:linear-gradient(180deg,#3b82f6,#2563eb)}
+.feed{background:linear-gradient(180deg,#ffffff,#f0f0f0);color:#1a1a1a !important}
 .poop{background:linear-gradient(180deg,#92400e,#78350f)}
 .pee{background:linear-gradient(180deg,#eab308,#ca8a04)}
-.antibiotic{background:linear-gradient(180deg,#ec4899,#db2777)}
+.antibiotic{background:linear-gradient(180deg,#6b7280,#4b5563)}
+.tummy-time{background:linear-gradient(180deg,#a855f7,#9333ea)}
+.bath{background:linear-gradient(180deg,#06b6d4,#0891b2)}
 .wound-clean{background:linear-gradient(180deg,#10b981,#059669)}
 .vit-d{background:linear-gradient(180deg,#f97316,#ea580c)}
 .pump{background:linear-gradient(180deg,#ec4899,#db2777)}
@@ -91,7 +97,7 @@ h1{margin:0 0 12px;font-size:20px}
 
 .controls{display:flex;gap:8px;margin-bottom:12px}
 .controls button{
-  flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef;background:white;
+  flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text-primary);
 }
 .filter-container{
   display:flex;
@@ -106,8 +112,9 @@ h1{margin:0 0 12px;font-size:20px}
   flex:1;
   padding:10px;
   border-radius:8px;
-  border:1px solid #e6e9ef;
-  background:white;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text-primary);
   font-size:14px;
   font-family:inherit;
   height:auto;
@@ -120,8 +127,9 @@ h1{margin:0 0 12px;font-size:20px}
   max-width:150px;
   padding:10px;
   border-radius:8px;
-  border:1px solid #e6e9ef;
-  background:white;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text-primary);
   font-size:14px;
   font-family:inherit;
   cursor:pointer;
@@ -135,8 +143,9 @@ h1{margin:0 0 12px;font-size:20px}
   max-width:180px;
   padding:10px;
   border-radius:8px;
-  border:1px solid #e6e9ef;
-  background:white;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text-primary);
   font-size:14px;
   font-family:inherit;
   cursor:pointer;
@@ -147,11 +156,13 @@ h1{margin:0 0 12px;font-size:20px}
 
 .history{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
 .history li{
-  display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #f1f5f9;
+  display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--border);
   font-size:14px;
+  background:var(--card);
+  color:var(--text-primary);
 }
-.event-label{font-weight:600}
-.event-meta{color:var(--muted);font-size:12px}
+.event-label{font-weight:600;color:var(--text-primary)}
+.event-meta{color:var(--text-secondary);font-size:12px}
 .event-meta:hover{color:var(--accent);opacity:0.8}
 
 .chart-section{margin-top:24px}
@@ -161,7 +172,7 @@ h1{margin:0 0 12px;font-size:20px}
 .chart-title{
   font-size:16px;
   font-weight:600;
-  color:#374151;
+  color:var(--text-secondary);
   margin-bottom:12px;
 }
 .chart-controls{
@@ -177,14 +188,15 @@ h1{margin:0 0 12px;font-size:20px}
 }
 .chart-control-group label{
   font-size:14px;
-  color:#374151;
+  color:var(--text-secondary);
   font-weight:500;
 }
 .chart-select{
   padding:6px 10px;
   border-radius:6px;
-  border:1px solid #e6e9ef;
-  background:white;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text-primary);
   font-size:14px;
   font-family:inherit;
 }
