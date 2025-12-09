@@ -1286,7 +1286,7 @@ function render(){
   breastfeeding = calcBreastfeedingFromEvents();
   
   // sleep status
-  elements.sleepStatus.textContent = sleeping ? '😴 Sleeping' : '👶 Awake';
+  elements.sleepStatus.textContent = sleeping ? '😴 Sleeping' : '👶🏻 Awake';
   // update sleep button text
   elements.btnSleep.textContent = sleeping ? 'Wake' : 'Sleep';
   // update breast button text
