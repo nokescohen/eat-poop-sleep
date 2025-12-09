@@ -2745,7 +2745,7 @@ function updateChartFeedings() {
         },
         datalabels: {
           display: window.innerWidth >= 420,
-          color: '#374151',
+          color: '#ffffff',
           anchor: 'end',
           align: 'top',
           formatter: function(value, context) {
@@ -2898,7 +2898,7 @@ function updateChartBaby() {
         },
         datalabels: {
           display: true,
-          color: '#374151',
+          color: '#ffffff',
           anchor: 'end',
           align: 'top',
           formatter: function(value) {
@@ -2987,7 +2987,7 @@ function updateChartMama() {
         },
         datalabels: {
           display: true,
-          color: '#374151',
+          color: '#ffffff',
           anchor: 'end',
           align: 'top',
           formatter: function(value) {
