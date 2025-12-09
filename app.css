@@ -36,9 +36,10 @@ body{
 
 h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
 .section-title{margin:16px 0 8px;font-size:16px;font-weight:600;color:var(--text-secondary)}
-.buttons{display:flex;gap:10px;margin-bottom:12px}
+.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
 .big{
-  flex:1;
+  flex:1 1 calc(50% - 5px);
+  min-width:120px;
   padding:18px 10px;
   font-size:18px;
   border:0;
@@ -68,13 +69,16 @@ h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
 .status-row{display:flex;gap:10px;margin-bottom:12px}
 .status{
   flex:1;
-  padding:10px;
+  padding:12px;
   border-radius:8px;
-  background:#f8fafc;
-  color:var(--muted);
-  font-size:13px;
+  background:var(--card);
+  border:1px solid var(--border);
+  color:var(--text-primary);
+  font-size:14px;
+  font-weight:500;
   text-align:center;
   line-height:1.4;
+  box-shadow:0 2px 4px rgba(0,0,0,0.1);
 }
 .stats-boxes{display:flex;gap:10px;margin-bottom:12px}
 .stats-box-container{flex:1;display:flex;flex-direction:column;gap:4px}
@@ -243,7 +247,12 @@ h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
 }
 
 @media (max-width:420px){
-  .big{padding:14px;font-size:16px}
+  .big{
+    padding:14px 8px;
+    font-size:16px;
+    flex:1 1 calc(50% - 5px);
+    min-width:100px;
+  }
   .chart-controls{flex-direction:column;gap:8px}
   .chart-control-group{width:100%}
   .chart-select{flex:1}
