@@ -35,7 +35,7 @@ body{
 }
 
 h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
-.section-title{margin:16px 0 8px;font-size:16px;font-weight:600;color:var(--text-secondary)}
+.section-title{margin:16px 0 8px;font-size:16px;font-weight:600;color:var(--text-primary)}
 .buttons{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
 .big{
   flex:1 1 calc(20% - 8px);
@@ -89,15 +89,17 @@ h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
 .stats-box-label{
   font-size:14px;
   font-weight:600;
-  color:#374151;
+  color:var(--text-primary);
   text-align:center;
+  margin-bottom:4px;
 }
 .stats-box{
-  padding:10px;
+  padding:12px;
   border-radius:8px;
-  background:#f8fafc;
-  color:var(--muted);
-  font-size:12px;
+  background:var(--card);
+  border:1px solid var(--border);
+  color:var(--text-primary);
+  font-size:13px;
   text-align:center;
   line-height:1.4;
   word-break:break-word;
