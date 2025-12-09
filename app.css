@@ -53,22 +53,22 @@ h1{margin:0 0 12px;font-size:20px;color:var(--text-primary)}
   opacity:0.85;
   font-weight:400;
 }
-/* Baby Stats - Rainbow colors */
+/* Baby Stats - ROYGBIV sequence */
 .sleep{background:linear-gradient(180deg,#ef4444,#dc2626)} /* Red */
-.feed{background:linear-gradient(180deg,#ffffff,#f0f0f0);color:#1a1a1a !important} /* White */
-.vit-d{background:linear-gradient(180deg,#f97316,#ea580c)} /* Orange */
-.poop{background:linear-gradient(180deg,#eab308,#ca8a04)} /* Yellow */
-.pee{background:linear-gradient(180deg,#84cc16,#65a30d)} /* Lime Green */
-.tummy-time{background:linear-gradient(180deg,#22c55e,#16a34a)} /* Green */
-.breast{background:linear-gradient(180deg,#06b6d4,#0891b2)} /* Cyan */
-.wound-clean{background:linear-gradient(180deg,#3b82f6,#2563eb)} /* Blue */
-.bath{background:linear-gradient(180deg,#6366f1,#4f46e5)} /* Indigo */
-.antibiotic{background:linear-gradient(180deg,#8b5cf6,#7c3aed)} /* Violet */
+.feed{background:linear-gradient(180deg,#f97316,#ea580c)} /* Orange */
+.vit-d{background:linear-gradient(180deg,#eab308,#ca8a04)} /* Yellow */
+.poop{background:linear-gradient(180deg,#22c55e,#16a34a)} /* Green */
+.pee{background:linear-gradient(180deg,#3b82f6,#2563eb)} /* Blue */
+.tummy-time{background:linear-gradient(180deg,#6366f1,#4f46e5)} /* Indigo */
+.breast{background:linear-gradient(180deg,#8b5cf6,#7c3aed)} /* Violet */
+.wound-clean{background:linear-gradient(180deg,#ec4899,#db2777)} /* Pink (continuing sequence) */
+.bath{background:linear-gradient(180deg,#06b6d4,#0891b2)} /* Cyan (continuing sequence) */
+.antibiotic{background:linear-gradient(180deg,#6b7280,#4b5563)} /* Grey */
 
-/* Mama Stats - Rainbow colors (continuing from Baby) */
-.pump{background:linear-gradient(180deg,#ec4899,#db2777)} /* Pink */
-.freeze{background:linear-gradient(180deg,#f472b6,#ec4899)} /* Rose */
-.h2o{background:linear-gradient(180deg,#a855f7,#9333ea)} /* Purple */
+/* Mama Stats - ROYGBIV sequence */
+.pump{background:linear-gradient(180deg,#ef4444,#dc2626)} /* Red */
+.freeze{background:linear-gradient(180deg,#f97316,#ea580c)} /* Orange */
+.h2o{background:linear-gradient(180deg,#eab308,#ca8a04)} /* Yellow */
 
 .status-row{display:flex;gap:10px;margin-bottom:12px}
 .status{
