@@ -1396,11 +1396,12 @@ function render(){
   const breastMinutes = Math.round(counts.breastHours * 60);
   const breastMinutesStr = breastMinutes > 0 ? `${breastMinutes}m` : '0m';
   const wakeWindowMinutes = Math.round(avgWakeWindow * 60);
-  const wakeWindowStr = avgWakeWindow > 0 ? `Avg wake: ${wakeWindowMinutes}m` : 'No wake windows';
+  const wakeWindowStr = avgWakeWindow > 0 ? `, Avg wake: ${wakeWindowMinutes}m` : '';
+  const tummyTimeStr = counts.tummyTimeMinutes > 0 ? `${counts.tummyTimeMinutes}min` : '0min';
+  const bathStr = counts.bath > 0 ? `${counts.bath}` : '0';
   const dateStr = selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const tummyTimeStr = counts.tummyTimeMinutes > 0 ? `, Tummy Time: ${counts.tummyTimeMinutes}min` : '';
-  const bathStr = counts.bath > 0 ? `, Bath: ${counts.bath}` : '';
-  const babyStatText = `${dateStr} — Pee: ${counts.pee}, Poop: ${counts.poop}, Bottle Feed: ${counts.feedOunces}oz, Breastfeed: ${breastMinutesStr}, Sleep: ${sleepHoursStr}, ${wakeWindowStr}, Antibiotic: ${counts.antibiotic}, Wound Clean: ${counts.woundClean}, Vit D: ${counts.vitD}${tummyTimeStr}${bathStr}`;
+  // Reorder stats to match button order: Sleep, Bottle Feed, Vit D, Poop, Pee, Tummy Time, Breastfeed, Wound Clean, Bath, Antibiotic
+  const babyStatText = `${dateStr} — Sleep: ${sleepHoursStr}${wakeWindowStr}, Bottle Feed: ${counts.feedOunces}oz, Vit D: ${counts.vitD}, Poop: ${counts.poop}, Pee: ${counts.pee}, Tummy Time: ${tummyTimeStr}, Breastfeed: ${breastMinutesStr}, Wound Clean: ${counts.woundClean}, Bath: ${bathStr}, Antibiotic: ${counts.antibiotic}`;
   const mamaStatText = `${dateStr} — Pump: ${counts.pumpOunces}oz, Freeze: ${counts.freezeOunces}oz, H2O: ${counts.h2oOunces}oz`;
   elements.statsBaby.textContent = babyStatText;
   elements.statsMama.textContent = mamaStatText;
