@@ -1262,12 +1262,14 @@ async function editTimestamp(ev){
 
 async function editQuantity(ev){
   const currentAmount = ev.data && ev.data.amount ? ev.data.amount : 0;
-  const newAmountStr = prompt('Edit amount (oz):', currentAmount);
+  const isTummyTime = ev.type === 'tummy_time';
+  const unit = isTummyTime ? 'minutes' : 'oz';
+  const newAmountStr = prompt(`Edit ${isTummyTime ? 'duration' : 'amount'} (${unit}):`, currentAmount);
   if(newAmountStr === null) return; // User cancelled
   
   const newAmount = parseFloat(newAmountStr);
   if(isNaN(newAmount) || newAmount < 0){
-    alert('Invalid amount. Please enter a positive number.');
+    alert(`Invalid ${isTummyTime ? 'duration' : 'amount'}. Please enter a positive number.`);
     return;
   }
   
@@ -1667,7 +1669,7 @@ function render(){
     
     // Handle regular events (non-session)
     // Check if this event type has an amount
-    const hasAmount = (ev.type === 'feed' || ev.type === 'pump' || ev.type === 'freeze' || ev.type === 'h2o') && ev.data && ev.data.amount;
+    const hasAmount = (ev.type === 'feed' || ev.type === 'pump' || ev.type === 'freeze' || ev.type === 'h2o' || ev.type === 'tummy_time') && ev.data && ev.data.amount;
     
     if(hasAmount){
       // Split label into text and amount parts
@@ -1675,11 +1677,13 @@ function render(){
       labelText.textContent = prettyLabel(ev).split(' • ')[0] + ' • ';
       
       const amountSpan = document.createElement('span');
-      amountSpan.textContent = `${ev.data.amount} oz`;
+      // Use "min" for tummy_time, "oz" for others
+      const unit = ev.type === 'tummy_time' ? 'min' : 'oz';
+      amountSpan.textContent = `${ev.data.amount} ${unit}`;
       amountSpan.style.cursor = 'pointer';
       amountSpan.style.textDecoration = 'underline';
       amountSpan.style.color = 'var(--accent)';
-      amountSpan.title = 'Click to edit amount';
+      amountSpan.title = `Click to edit ${ev.type === 'tummy_time' ? 'duration' : 'amount'}`;
       amountSpan.onclick = () => editQuantity(ev);
       
       label.appendChild(labelText);
